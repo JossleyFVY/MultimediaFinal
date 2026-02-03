@@ -8,37 +8,40 @@ export default class GameScene extends Phaser.Scene {
     create() {
         // --- 1. CONFIGURACIÓN INICIAL ---
         this.isGameOver = false;
-        this.gameSpeed = 5; // Velocidad inicial del mundo
+        this.gameSpeed = 5; // Velocidad inicial
         this.scoreDistance = 0; // Metros recorridos
-        this.mistakeTimestamps = []; // Para controlar los fallos seguidos (regla de los 10s)
-        this.zombieDistance = 100; // 0 = Te atrapan, 100 = Lejos
+        this.mistakeTimestamps = []; // Para controlar fallos seguidos
+        this.zombieDistance = 100; // Distancia de la horda (0 = Muerte)
         
         const w = this.scale.width;
         const h = this.scale.height;
-        const groundY = h - 50;
+        
+        // DEFINIMOS LA ALTURA DEL SUELO (Más alto para dejar sitio a botones)
+        this.groundY = h - 120; 
 
         // --- 2. ESCENARIO (SUELO Y FONDO) ---
-        // Creamos un suelo estático
-        this.ground = this.add.rectangle(w/2, h - 25, w, 50, 0x333333);
-        this.physics.add.existing(this.ground, true); // true = estático (no se mueve por gravedad)
+        // Suelo estático
+        this.ground = this.add.rectangle(w/2, this.groundY + 25, w, 50, 0x333333);
+        this.physics.add.existing(this.ground, true); // true = estático
 
         // --- 3. JUGADOR ---
-        // Creamos al jugador (cuadrado azul por ahora)
-        this.player = this.physics.add.sprite(150, groundY - 100, null);
+        // Lo colocamos sobre el suelo nuevo
+        this.player = this.physics.add.sprite(150, this.groundY - 100, null);
         this.player.setSize(40, 80); // Hitbox de pie
         this.player.setCollideWorldBounds(true);
         
-        // Simulación visual del jugador (esto se cambiaría por animaciones reales)
+        // Simulación visual del jugador (Rectángulo Azul)
         this.playerGraphics = this.add.rectangle(0, 0, 40, 80, 0x0000ff);
         
         this.physics.add.collider(this.player, this.ground);
 
         // --- 4. ZOMBIES (PERSEGUIDORES) ---
-        // Representación visual de la horda (cuadrado verde detrás)
-        this.zombieHorde = this.add.rectangle(50, groundY - 50, 60, 80, 0x00ff00);
-        this.zombieText = this.add.text(50, groundY - 100, "¡RAAWR!", { fontSize: '12px', color: '#0f0'}).setOrigin(0.5);
+        // Horda Zombie (Rectángulo Verde)
+        this.zombieHorde = this.add.rectangle(50, this.groundY - 50, 60, 80, 0x00ff00);
+        this.zombieText = this.add.text(50, this.groundY - 100, "¡RAAWR!", { fontSize: '12px', color: '#0f0'}).setOrigin(0.5);
 
         // --- 5. GRUPOS DE OBSTÁCULOS ---
+        // IMPORTANTE: allowGravity false para que no se caigan
         this.obstacles = this.physics.add.group({
             allowGravity: false,
             immovable: true
@@ -56,7 +59,6 @@ export default class GameScene extends Phaser.Scene {
         this.cursors = this.input.keyboard.createCursorKeys();
 
         // --- 7. TIMERS (GENERACIÓN DE MUNDO) ---
-        // Evento para generar obstáculos cada cierto tiempo
         this.time.addEvent({
             delay: 2000,
             callback: this.spawnObstacle,
@@ -77,59 +79,53 @@ export default class GameScene extends Phaser.Scene {
 
         // --- ACTUALIZAR LÓGICA DE JUEGO ---
 
-        // 1. Sincronizar gráfico con física (ya que usamos un rectángulo simple)
+        // 1. Sincronizar gráfico con física
         this.playerGraphics.x = this.player.x;
         this.playerGraphics.y = this.player.y;
 
-        // 2. Aumentar distancia y velocidad progresiva
+        // 2. Aumentar distancia y velocidad
         this.scoreDistance += 0.05 * this.gameSpeed;
         this.scoreText.setText(`Distancia: ${Math.floor(this.scoreDistance)}m`);
-        
-        // Aumentar dificultad muy lentamente
         this.gameSpeed += 0.001; 
 
         // 3. Controles
-        // Saltar (Solo si toca suelo)
+        // Saltar
         if ((this.cursors.up.isDown || this.jumpBtnDown) && this.player.body.touching.down) {
             this.performJump();
         }
 
-        // Agacharse (Cambia hitbox)
+        // Agacharse
         if (this.cursors.down.isDown || this.duckBtnDown) {
             this.performDuck(true);
         } else {
-            this.performDuck(false); // Levantar si suelta botón
+            this.performDuck(false);
         }
 
-        // 4. Mover obstáculos hacia la izquierda (Simular que corremos)
+        // 4. Mover obstáculos hacia la izquierda
         this.obstacles.getChildren().forEach(obstacle => {
             obstacle.x -= this.gameSpeed;
-            // Eliminar si sale de pantalla
             if (obstacle.x < -100) obstacle.destroy();
         });
 
-        // 5. Gestión de Zombies y Game Over
+        // 5. Actualizar Zombies
         this.updateZombies();
     }
 
     // --- ACCIONES DEL JUGADOR ---
 
     performJump() {
-        // Aquí iría: this.player.play('jump_animation_' + Phaser.Math.Between(1, 3));
         this.player.setVelocityY(-600); 
-        this.playerGraphics.fillColor = 0x00ffff; // Feedback visual (Cian)
+        this.playerGraphics.fillColor = 0x00ffff; // Cian al saltar
     }
 
     performDuck(isDucking) {
         if (isDucking) {
-            // Reducir altura a la mitad
             this.player.body.setSize(40, 40);
-            this.player.body.setOffset(0, 40); // Bajar el offset para que quede a ras de suelo
+            this.player.body.setOffset(0, 40);
             this.playerGraphics.height = 40;
-            this.playerGraphics.y += 20; // Ajuste visual
-            this.playerGraphics.fillColor = 0xffff00; // Feedback visual (Amarillo)
+            this.playerGraphics.y += 20; 
+            this.playerGraphics.fillColor = 0xffff00; // Amarillo al agacharse
         } else {
-            // Restaurar tamaño original
             this.player.body.setSize(40, 80);
             this.player.body.setOffset(0, 0);
             this.playerGraphics.height = 80;
@@ -143,27 +139,27 @@ export default class GameScene extends Phaser.Scene {
         if (this.isGameOver) return;
 
         const w = this.scale.width;
-        const groundY = this.scale.height - 50;
+        const groundY = this.groundY; // Usamos la nueva altura del suelo
         
-        // 50% probabilidad: Obstáculo bajo o Alto
         const type = Math.random() > 0.5 ? 'low' : 'high';
 
         let obstacle;
         if (type === 'low') {
-            // Caja en el suelo
+            // CAJA BAJA (Saltar)
             obstacle = this.add.rectangle(w + 50, groundY - 25, 50, 50, 0xff0000);
         } else {
-            // Viga en el aire
-            obstacle = this.add.rectangle(w + 50, groundY - 70, 50, 40, 0xff0000);
+            // OBSTÁCULO ALTO (Agacharse)
+            // Configurado como un Muro Flotante Gigante
+            const gap = 60; // Hueco para pasar agachado
+            const height = 400; // Muy alto para no saltarlo
+            const yPos = groundY - gap - (height / 2);
+
+            obstacle = this.add.rectangle(w + 50, yPos, 50, height, 0xff0000);
         }
 
-        // 1. Añadimos físicas individuales
+        // Añadimos físicas y forzamos que floten
         this.physics.add.existing(obstacle);
-        
-        // 2. Metemos el obstáculo en el grupo "sin gravedad"
         this.obstacles.add(obstacle);
-
-        // 3. (SEGURIDAD) Forzamos manualmente que no tenga gravedad
         obstacle.body.setAllowGravity(false);
         obstacle.body.setImmovable(true);
     }
@@ -171,73 +167,72 @@ export default class GameScene extends Phaser.Scene {
     // --- SISTEMA DE DAÑO Y ZOMBIES ---
 
     handleCollision(obstacle) {
-        // Solo cuenta si el obstáculo no ha sido ya "golpeado"
         if (obstacle.hit) return;
         obstacle.hit = true;
-        obstacle.fillColor = 0x555555; // Se oscurece para indicar choque
+        obstacle.fillColor = 0x555555;
 
-        // 1. Penalización: Los zombies se acercan mucho
+        // Penalización
         this.zombieDistance -= 40; 
         
-        // 2. Registrar timestamp del fallo
+        // Regla de fallos seguidos
         const now = Date.now();
         this.mistakeTimestamps.push(now);
-
-        // 3. Verificar regla: "2 fallos en menos de 10 segundos"
-        // Filtramos fallos antiguos (> 10s)
         this.mistakeTimestamps = this.mistakeTimestamps.filter(time => now - time < 10000);
 
         if (this.mistakeTimestamps.length >= 2) {
-            console.log("¡Demasiados fallos seguidos!");
-            this.zombieDistance = 0; // Muerte instantánea
+            this.zombieDistance = 0;
         }
 
-        // Efecto visual de choque (Cámara tiembla)
         this.cameras.main.shake(200, 0.01);
     }
 
     updateZombies() {
-        // Recuperación lenta: Si corres bien, te alejas un poco de los zombies
-        if (this.zombieDistance < 100) {
+        if (this.zombieDistance < 150) {//Distancia zombies con el jugador al correr
             this.zombieDistance += 0.05;
         }
 
-        // Actualizar barra visual
         const barWidth = Math.max(0, this.zombieDistance);
         this.dangerBar.width = barWidth;
 
-        // Mover sprite de la horda visualmente
-        // Si distance es 100 -> x = -50 (fuera pantalla)
-        // Si distance es 0 -> x = player.x (te cogen)
-        const targetX = this.player.x - (this.zombieDistance * 2) + 50; 
+        const targetX = this.player.x - (this.zombieDistance * 3); 
         this.zombieHorde.x = Phaser.Math.Linear(this.zombieHorde.x, targetX, 0.1);
         this.zombieText.x = this.zombieHorde.x;
 
-        // Condición de derrota
         if (this.zombieDistance <= 0) {
+            this.triggerGameOver();
+        }
+        // Muerte B (NUEVO): Si los cuadrados se tocan físicamente
+        // Esto arregla el "efecto fantasma" donde el zombie te tocaba y no pasaba nada
+        const playerBounds = this.player.getBounds();
+        const zombieBounds = this.zombieHorde.getBounds();
+
+        if (Phaser.Geom.Intersects.RectangleToRectangle(playerBounds, zombieBounds)) {
             this.triggerGameOver();
         }
     }
 
-    // --- UI MÓVIL ---
+    // --- UI MÓVIL (BOTONES PEQUEÑOS Y ABAJO) ---
     createMobileControls(w, h) {
-        // Botón Saltar (Lado Derecho)
-        const jumpBtn = this.add.rectangle(w - 80, h - 80, 100, 100, 0xffffff, 0.3)
+        const btnSize = 60; // Más pequeños
+        const btnY = h - 50; // Pegados al fondo
+
+        // Botón Saltar (Derecha)
+        const jumpBtn = this.add.rectangle(w - 60, btnY, btnSize, btnSize, 0xffffff, 0.3)
             .setInteractive()
-            .setScrollFactor(0); // Que no se mueva con la cámara
+            .setScrollFactor(0);
         
-        this.add.text(w - 80, h - 80, '⬆', { fontSize: '40px' }).setOrigin(0.5);
+        this.add.text(w - 60, btnY, '⬆', { fontSize: '30px' }).setOrigin(0.5);
 
         jumpBtn.on('pointerdown', () => this.jumpBtnDown = true);
         jumpBtn.on('pointerup', () => this.jumpBtnDown = false);
         jumpBtn.on('pointerout', () => this.jumpBtnDown = false);
 
-        // Botón Agacharse (Lado Izquierdo)
-        const duckBtn = this.add.rectangle(80, h - 80, 100, 100, 0xffffff, 0.3)
+        // Botón Agacharse (Izquierda)
+        const duckBtn = this.add.rectangle(60, btnY, btnSize, btnSize, 0xffffff, 0.3)
             .setInteractive()
             .setScrollFactor(0);
 
-        this.add.text(80, h - 80, '⬇', { fontSize: '40px' }).setOrigin(0.5);
+        this.add.text(60, btnY, '⬇', { fontSize: '30px' }).setOrigin(0.5);
 
         duckBtn.on('pointerdown', () => this.duckBtnDown = true);
         duckBtn.on('pointerup', () => this.duckBtnDown = false);
@@ -248,15 +243,13 @@ export default class GameScene extends Phaser.Scene {
     triggerGameOver() {
         this.isGameOver = true;
         this.physics.pause();
-        this.player.setTint(0xff0000); // Jugador rojo (infectado)
+        this.player.setTint(0xff0000);
         
-        // Guardar récord
         const currentBest = localStorage.getItem('parkour_highscore') || 0;
         if (this.scoreDistance > currentBest) {
             localStorage.setItem('parkour_highscore', Math.floor(this.scoreDistance));
         }
 
-        // Esperar un segundo y cambiar escena
         this.time.delayedCall(1000, () => {
             this.scene.start('GameOverScene', { score: Math.floor(this.scoreDistance) });
         });
