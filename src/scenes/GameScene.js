@@ -32,6 +32,7 @@ export default class GameScene extends Phaser.Scene {
         // --- Fondo tileable ---
         this.load.image('background', 'assets/img/background.png');
     }
+    //cOMENNTARIO
 
     // --- CREATE: Se ejecuta una vez al empezar el juego ---
     create() {
