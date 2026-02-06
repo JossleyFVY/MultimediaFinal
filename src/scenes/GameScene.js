@@ -28,6 +28,12 @@ export default class GameScene extends Phaser.Scene {
             frameWidth: 54, 
             frameHeight: 39
         });
+
+        // Cargar Sprite del Zombie
+        this.load.spritesheet('anim_zombie', 'assets/img/Zombie_Run.png', { 
+            frameWidth: 190, 
+            frameHeight: 198 
+        });
     }
 
     // --- CREATE: Se ejecuta una vez al empezar el juego ---
@@ -73,7 +79,7 @@ export default class GameScene extends Phaser.Scene {
 
         // --- 3. ESCENARIO (SUELO) ---
         // Creamos el rectángulo visual del suelo
-        this.ground = this.add.rectangle(w/2, this.groundY + 20, w, 10, 0x333333);
+        this.ground = this.add.rectangle(w/2, this.groundY + 20, w, 20, 0x333333);
         // Le damos físicas estáticas (true) para que no se caiga ni se mueva
         this.physics.add.existing(this.ground, true);
 
@@ -94,13 +100,38 @@ export default class GameScene extends Phaser.Scene {
 
         // --- 5. ZOMBIES (VISUAL) ---
         // Creamos el cuadrado verde y el texto que nos persigue
-        this.zombieHorde = this.add.rectangle(50, this.groundY - 50, 60, 80, 0x00ff00);
-        this.zombieText = this.add.text(50, this.groundY - 100, "¡RAAWR!", { fontSize: '12px', color: '#0f0'}).setOrigin(0.5);
+        // (Nota: He mantenido tu estructura original aquí)
+        
+        this.anims.create({
+            key: 'zombie_run',
+            frames: this.anims.generateFrameNumbers('anim_zombie', { start: 0, end: -1 }),
+            frameRate: 10, // Ajusta la velocidad si corren muy rápido
+            repeat: -1
+        });
+
+        // 2. CREAR EL SPRITE (Sustituye al rectángulo verde)
+        // Lo colocamos un poco más abajo (-60) para que pisen el suelo
+        this.zombieHorde = this.physics.add.sprite(50, this.groundY - 60, 'anim_zombie');
+        this.zombieHorde.play('zombie_run'); // ¡Que corran!
+
+        // IMPORTANTE: Configuración para que se comporte como el cuadrado antiguo
+        this.zombieHorde.body.setAllowGravity(false); // Que no caigan (para que floten persiguiéndote)
+        this.zombieHorde.setDepth(1); // Para que se dibujen por encima del fondo
+        this.zombieHorde.body.setImmovable(true); // Que nada lo mueva
+        this.zombieHorde.setOrigin(0.5, 1); // Anclamos el sprite a sus pies para facilitar posicionamiento
+
+        // AJUSTE DE HITBOX (Opcional, si el zombie tiene mucho espacio vacío)
+        // Ajustado para tu imagen de 190x198. Caja de 40x80 centrada.
+        this.zombieHorde.body.setSize(40, 80);
+        this.zombieHorde.body.setOffset(75, 118);
+
+        // Texto del zombie
+        this.zombieText = this.add.text(50, this.groundY - 150, "¡RAAWR!", { fontSize: '12px', color: '#0f0'}).setOrigin(0.5);
 
         // --- 6. GRUPO DE OBSTÁCULOS ---
         this.obstacles = this.physics.add.group({
             allowGravity: false, // Importante: Los obstáculos flotan (para los aéreos)
-            immovable: false      // Si chocas, el obstáculo no sale volando, es un muro
+            immovable: true      // CORREGIDO: Debe ser true o los obstáculos saldrán volando al chocar
         });
 
         // OVERLAP: Detecta contacto pero NO frena al jugador físicamente (lo atraviesas y recibes daño)
@@ -121,8 +152,8 @@ export default class GameScene extends Phaser.Scene {
         });
 
         // UI: Textos de puntuación y barra de vida
-        this.scoreText = this.add.text(20, 20, 'Distancia: 0m', { fontSize: '20px', fill: '#fff' });
-        this.add.text(w - 150, 20, 'Peligro:', { fontSize: '16px', fill: '#fff' });
+        this.scoreText = this.add.text(20, 22, 'Distancia: 0m', { fontSize: '20px', fill: '#fff' });
+        this.add.text(w - 200, 22, 'Peligro:', { fontSize: '16px', fill: '#fff' });
         this.dangerBar = this.add.rectangle(w - 20, 30, 100, 10, 0xff0000).setOrigin(1, 0.5);
     }
 
@@ -163,9 +194,9 @@ export default class GameScene extends Phaser.Scene {
         // Si aterrizamos en el suelo después de un salto, volvemos a la animación de correr
         if (this.player.body.touching.down && this.player.body.velocity.y >= 0) {
             if (this.player.anims.currentAnim && this.player.anims.currentAnim.key !== 'run') {
-            this.player.play('run', true);
+                this.player.play('run', true);
+            }
         }
-    }
     }
 
     // --- MÉTODOS DE ACCIÓN ---
@@ -194,8 +225,8 @@ export default class GameScene extends Phaser.Scene {
             this.player.body.setOffset(10, 34); 
         } else {
             // Si estamos de pie: RESTAURAMOS los valores originales definidos en create()
-            this.player.body.setSize(30, 50); 
-            this.player.body.setOffset(10, 14);
+            this.player.body.setSize(10, 20); 
+            this.player.body.setOffset(21, 18);
         }
     }
 
@@ -211,10 +242,10 @@ export default class GameScene extends Phaser.Scene {
 
         if (type === 'low') {
             // Caja en el suelo (hay que saltar)
-            obstacle = this.add.rectangle(w + 50, groundY - 25, 50, 50, 0xff0000);
+            obstacle = this.add.rectangle(w + 50, groundY - 25, 50, 70, 0xff0000);
         } else {
             // Muro aéreo (hay que agacharse)
-            const gap = 60; // Hueco libre abajo
+            const gap = 30; // Hueco libre abajo
             const height = 400; // Altura enorme para que no se pueda saltar
             const yPos = groundY - gap - (height / 2); // Matemáticas para colocarlo
             obstacle = this.add.rectangle(w + 50, yPos, 50, height, 0xff0000);
