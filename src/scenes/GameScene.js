@@ -36,6 +36,7 @@ export default class GameScene extends Phaser.Scene {
             frameHeight: 198 
         });
     }
+    //cOMENNTARIO
 
     // --- CREATE: Se ejecuta una vez al empezar el juego ---
     create() {
