@@ -32,8 +32,8 @@ export default class GameScene extends Phaser.Scene {
         // Cargar Sprite del Zombie (NUEVO NOMBRE)
         // Imagen: zombie.png (759x198). Calculamos 4 frames aprox: 759/4 = 189.
         this.load.spritesheet('anim_zombie', 'assets/img/zombie.png', { 
-            frameWidth: 189, 
-            frameHeight: 198 
+            frameWidth: 64, 
+            frameHeight: 60
         });
     }
     //cOMENNTARIO
@@ -347,8 +347,8 @@ export default class GameScene extends Phaser.Scene {
             localStorage.setItem('parkour_highscore', Math.floor(this.scoreDistance));
         }
 
-        // Esperamos 1 segundo y vamos a la pantalla de Game Over
-        this.time.delayedCall(1000, () => {
+        // Esperamos 2 segundos y vamos a la pantalla de Game Over
+        this.time.delayedCall(2000, () => {
             this.scene.start('GameOverScene', { score: Math.floor(this.scoreDistance) });
         });
     }
