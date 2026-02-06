@@ -7,18 +7,18 @@ export default class GameScene extends Phaser.Scene {
 
     preload() {
         // --- Cargar imágenes ---
-        this.load.spritesheet('anim_run', 'assets/img/P1_Run.png', { 
-            frameWidth: 134, 
-            frameHeight: 117 
+        this.load.spritesheet('anim_run', 'assets/img/P1_Run.png', {
+            frameWidth: 134,
+            frameHeight: 117
         });
 
-        this.load.spritesheet('anim_jump', 'assets/img/P1_Jump.png', { 
-            frameWidth: 108, 
-            frameHeight: 86 
+        this.load.spritesheet('anim_jump', 'assets/img/P1_Jump.png', {
+            frameWidth: 108,
+            frameHeight: 86
         });
 
-        this.load.spritesheet('anim_pirouette', 'assets/img/P1_Jump2.png', { 
-            frameWidth: 108, 
+        this.load.spritesheet('anim_pirouette', 'assets/img/P1_Jump2.png', {
+            frameWidth: 108,
             frameHeight: 78
         });
 
@@ -27,25 +27,34 @@ export default class GameScene extends Phaser.Scene {
     }
 
     create() {
-        // --- 1. CONFIGURACIÓN INICIAL ---
+        // --- CONFIGURACIÓN INICIAL ---
         this.isGameOver = false;
-        this.gameSpeed = 5; 
-        this.scoreDistance = 0; 
-        this.mistakeTimestamps = []; 
-        this.zombieDistance = 100; 
-        
+        this.gameSpeed = 5;
+        this.scoreDistance = 0;
+        this.mistakeTimestamps = [];
+        this.zombieDistance = 100;
+
         const w = this.scale.width;
         const h = this.scale.height;
-        
-        // Altura del suelo
-        this.groundY = h - 120; 
 
-        // --- 2. FONDO TILEABLE ---
-        this.bg = this.add.tileSprite(0, 0, w, h, 'background')
+        this.groundY = h - 120;
+
+        // --- FONDO TILEABLE ESCALADO ---
+        // Obtener tamaño original de la imagen
+        const bgTexture = this.textures.get('background').getSourceImage();
+        const scaleFactorY = this.scale.height / bgTexture.height;
+        const scaleFactorX = this.scale.width / bgTexture.width;
+
+        // Crear tileSprite con tamaño de la pantalla
+        this.bg = this.add.tileSprite(0, 0, this.scale.width, this.scale.height, 'background')
             .setOrigin(0, 0)
-            .setScrollFactor(0); // Se mueve manualmente
+            .setScrollFactor(0);
 
-        // --- 3. DEFINIR ANIMACIONES ---
+        // Escalar solo la textura, no el sprite
+        this.bg.tileScaleX = scaleFactorX;
+        this.bg.tileScaleY = scaleFactorY;
+
+        // --- ANIMACIONES ---
         this.anims.create({
             key: 'run',
             frames: this.anims.generateFrameNumbers('anim_run', { start: 0, end: -1 }),
@@ -67,34 +76,29 @@ export default class GameScene extends Phaser.Scene {
             repeat: 0
         });
 
-        // --- 4. ESCENARIO ---
-        this.ground = this.add.rectangle(w/2, this.groundY + 25, w, 50, 0x333333);
+        // --- ESCENARIO ---
+        this.ground = this.add.rectangle(w / 2, this.groundY + 25, w, 50, 0x333333);
         this.physics.add.existing(this.ground, true);
 
-        // --- 5. JUGADOR ---
+        // --- JUGADOR ---
         this.player = this.physics.add.sprite(150, this.groundY - 200, 'anim_run');
         this.player.play('run');
-        
-        this.player.body.setSize(20, 50); 
+        this.player.body.setSize(20, 50);
         this.player.body.setOffset(14, 14);
-        this.player.setCollideWorldBounds(true);        
+        this.player.setCollideWorldBounds(true);
         this.physics.add.collider(this.player, this.ground);
 
-        // --- 6. ZOMBIES ---
+        // --- ZOMBIES ---
         this.zombieHorde = this.add.rectangle(50, this.groundY - 50, 60, 80, 0x00ff00);
-        this.zombieText = this.add.text(50, this.groundY - 100, "¡RAAWR!", { fontSize: '12px', color: '#0f0'}).setOrigin(0.5);
+        this.zombieText = this.add.text(50, this.groundY - 100, "¡RAAWR!", { fontSize: '12px', color: '#0f0' }).setOrigin(0.5);
 
-        // --- 7. OBSTÁCULOS ---
-        this.obstacles = this.physics.add.group({
-            allowGravity: false,
-            immovable: true
-        });
-
+        // --- OBSTÁCULOS ---
+        this.obstacles = this.physics.add.group({ allowGravity: false, immovable: true });
         this.physics.add.overlap(this.player, this.obstacles, (player, obstacle) => {
             this.handleCollision(obstacle);
         });
 
-        // --- 8. CONTROLES Y UI ---
+        // --- CONTROLES Y UI ---
         this.createMobileControls(w, h);
         this.cursors = this.input.keyboard.createCursorKeys();
 
@@ -115,15 +119,15 @@ export default class GameScene extends Phaser.Scene {
     update(time, delta) {
         if (this.isGameOver) return;
 
-        // --- 1. Mover fondo ---
+        // --- MOVER FONDO ---
         this.bg.tilePositionX += this.gameSpeed;
 
-        // --- 2. Aumentar distancia y velocidad ---
+        // --- AUMENTAR DISTANCIA Y VELOCIDAD ---
         this.scoreDistance += 0.05 * this.gameSpeed;
         this.scoreText.setText(`Distancia: ${Math.floor(this.scoreDistance)}m`);
-        this.gameSpeed += 0.001; 
+        this.gameSpeed += 0.001;
 
-        // --- 3. Controles ---
+        // --- CONTROLES ---
         if ((this.cursors.up.isDown || this.jumpBtnDown) && this.player.body.touching.down) {
             this.performJump();
         }
@@ -134,16 +138,16 @@ export default class GameScene extends Phaser.Scene {
             this.performDuck(false);
         }
 
-        // --- 4. Mover obstáculos ---
+        // --- MOVER OBSTÁCULOS ---
         this.obstacles.getChildren().forEach(obstacle => {
             obstacle.x -= this.gameSpeed;
             if (obstacle.x < -100) obstacle.destroy();
         });
 
-        // --- 5. Actualizar Zombies ---
+        // --- ACTUALIZAR ZOMBIES ---
         this.updateZombies();
 
-        // --- 6. Gestión de Animaciones ---
+        // --- GESTIÓN DE ANIMACIONES ---
         if (this.player.body.touching.down) {
             if (this.player.anims.currentAnim && this.player.anims.currentAnim.key !== 'run') {
                 this.player.play('run', true);
@@ -151,7 +155,6 @@ export default class GameScene extends Phaser.Scene {
         }
     }
 
-    // --- ACCIONES ---
     performJump() {
         this.player.setVelocityY(-600);
         if (Math.random() > 0.3) {
@@ -163,28 +166,26 @@ export default class GameScene extends Phaser.Scene {
 
     performDuck(isDucking) {
         if (isDucking) {
-            this.player.body.setSize(30, 30); 
-            this.player.body.setOffset(10, 34); 
+            this.player.body.setSize(30, 30);
+            this.player.body.setOffset(10, 34);
         } else {
-            this.player.body.setSize(30, 50); 
+            this.player.body.setSize(30, 50);
             this.player.body.setOffset(10, 14);
         }
     }
 
     spawnObstacle() {
         if (this.isGameOver) return;
-
         const w = this.scale.width;
         const groundY = this.groundY;
-        
         const type = Math.random() > 0.5 ? 'low' : 'high';
         let obstacle;
 
         if (type === 'low') {
             obstacle = this.add.rectangle(w + 50, groundY - 25, 50, 50, 0xff0000);
         } else {
-            const gap = 60; 
-            const height = 400; 
+            const gap = 60;
+            const height = 400;
             const yPos = groundY - gap - (height / 2);
             obstacle = this.add.rectangle(w + 50, yPos, 50, height, 0xff0000);
         }
@@ -199,9 +200,8 @@ export default class GameScene extends Phaser.Scene {
         if (obstacle.hit) return;
         obstacle.hit = true;
         obstacle.fillColor = 0x555555;
+        this.zombieDistance -= 40;
 
-        this.zombieDistance -= 40; 
-        
         const now = Date.now();
         this.mistakeTimestamps.push(now);
         this.mistakeTimestamps = this.mistakeTimestamps.filter(time => now - time < 10000);
@@ -216,11 +216,10 @@ export default class GameScene extends Phaser.Scene {
         if (this.zombieDistance < 150) {
             this.zombieDistance += 0.05;
         }
-
         const barWidth = Math.max(0, this.zombieDistance);
         this.dangerBar.width = barWidth;
 
-        const targetX = this.player.x - (this.zombieDistance * 3); 
+        const targetX = this.player.x - (this.zombieDistance * 3);
         this.zombieHorde.x = Phaser.Math.Linear(this.zombieHorde.x, targetX, 0.1);
         this.zombieText.x = this.zombieHorde.x;
 
@@ -253,12 +252,10 @@ export default class GameScene extends Phaser.Scene {
         this.isGameOver = true;
         this.physics.pause();
         this.player.setTint(0xff0000);
-        
         const currentBest = localStorage.getItem('parkour_highscore') || 0;
         if (this.scoreDistance > currentBest) {
             localStorage.setItem('parkour_highscore', Math.floor(this.scoreDistance));
         }
-
         this.time.delayedCall(1000, () => {
             this.scene.start('GameOverScene', { score: Math.floor(this.scoreDistance) });
         });
