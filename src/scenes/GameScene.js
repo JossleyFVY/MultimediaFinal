@@ -138,50 +138,65 @@ export default class GameScene extends Phaser.Scene {
     // =================================================================
     // 3. UPDATE: BUCLE PRINCIPAL (60 VECES/SEG)
     // =================================================================
+    // --- UPDATE: Bucle principal ---
     update(time, delta) {
         if (this.isGameOver) return;
 
-        // 1. Mover fondo (Scroll infinito)
+        // 1. Mover fondo y calcular puntuación
         this.bg.tilePositionX += this.gameSpeed;
-
-        // 2. Calcular puntuación
         this.scoreDistance += 0.05 * this.gameSpeed;
         this.scoreText.setText(`Distancia: ${Math.floor(this.scoreDistance)}m`);
-        this.gameSpeed += 0.001; // Aumentar dificultad poco a poco
+        this.gameSpeed += 0.001;
 
-        // 3. Detectar si el jugador quiere agacharse
+        // 2. Detectar intención de agacharse
         const isDucking = this.cursors.down.isDown || this.duckBtnDown;
 
-        // --- LÓGICA DE CONTROLES ---
+        // --- CONTROLES ---
         
-        // SALTAR (Solo si toca el suelo)
+        // Salto (Solo si toca el suelo)
         if ((this.cursors.up.isDown || this.jumpBtnDown) && this.player.body.touching.down) {
             this.performJump();
         }
 
-        // AGACHARSE (Llamamos a la función pasando true/false)
+        // Agacharse
         this.performDuck(isDucking);
 
-        // --- MOVER OBSTÁCULOS ---
+        // --- OBSTÁCULOS ---
         this.obstacles.getChildren().forEach(obstacle => {
             obstacle.x -= this.gameSpeed;
-            // Borrar si sale de pantalla para ahorrar memoria
             if (obstacle.x < -100) obstacle.destroy();
         });
 
-        // --- ZOMBIES ---
         this.updateZombies();
 
-        // --- RECUPERACIÓN DE ANIMACIÓN (Caída de salto) ---
-        // Si caemos al suelo tras un salto y NO estamos pulsando agacharse...
+        // --- RECUPERACIÓN DE ANIMACIÓN (Correr) ---
+        // Si tocamos el suelo y NO estamos agachados, volvemos a correr
         if (this.player.body.touching.down && this.player.body.velocity.y >= 0 && !isDucking) {
-            // Aseguramos que volvemos a correr
             if (this.player.anims.currentAnim && this.player.anims.currentAnim.key !== 'run') {
                 this.player.play('run', true);
+                // Restaurar caja grande
+                this.player.body.setSize(50, 120);
+                this.player.body.setOffset(50, 20);
             }
         }
-    }
 
+        // =================================================================
+        // ¡¡CANDADO DE SEGURIDAD (ANTI-HUNDIMIENTO)!!
+        // =================================================================
+        // Esto comprueba 60 veces por segundo si el personaje se ha hundido
+        // por culpa de un choque o un cambio de tamaño.
+        
+        if (this.player.y > this.groundY) {
+            // 1. Lo forzamos a volver a la línea del suelo
+            this.player.y = this.groundY;
+            
+            // 2. Frenamos cualquier velocidad de caída residual
+            this.player.body.velocity.y = 0;
+            
+            // 3. Le decimos a Phaser "Oye, que estamos tocando suelo"
+            this.player.body.touching.down = true; 
+        }
+    }
     // =================================================================
     // 4. MÉTODOS DE ACCIÓN (Lógica del personaje)
     // =================================================================
@@ -217,6 +232,11 @@ export default class GameScene extends Phaser.Scene {
             
             if (this.player.anims.currentAnim.key !== 'duck') {
                 this.player.play('duck', true);
+            }
+            // 3. ¡CORRECCIÓN ANTI-HUNDIMIENTO!
+            // Si estamos en el suelo, forzamos la posición Y para que no se hunda por el cambio de tamaño
+            if (this.player.body.touching.down) {
+                this.player.y = this.groundY;
             }
         } else {
             // --- MODO DE PIE ---
