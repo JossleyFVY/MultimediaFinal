@@ -10,31 +10,34 @@ export default class GameScene extends Phaser.Scene {
     preload() {
         // Cargamos las hojas de sprites (imágenes con varios dibujitos dentro).
         // Los frameWidth/Height deben coincidir EXACTAMENTE con el tamaño de cada muñeco en tu imagen PNG.
-        
+
         // Animación de correr
-        this.load.spritesheet('anim_run', 'assets/img/P1_Run.png', { 
-            frameWidth: 67, 
-            frameHeight: 58 
+        this.load.spritesheet('anim_run', 'assets/img/P1_Run.png', {
+            frameWidth: 67,
+            frameHeight: 58
         });
 
         // Animación de salto
-        this.load.spritesheet('anim_jump', 'assets/img/P1_Jump.png', { 
-            frameWidth: 54, 
-            frameHeight: 43 
+        this.load.spritesheet('anim_jump', 'assets/img/P1_Jump.png', {
+            frameWidth: 54,
+            frameHeight: 43
         });
 
         // Animación de pirueta (salto especial)
-        this.load.spritesheet('anim_pirouette', 'assets/img/P1_Jump2.png', { 
-            frameWidth: 54, 
+        this.load.spritesheet('anim_pirouette', 'assets/img/P1_Jump2.png', {
+            frameWidth: 54,
             frameHeight: 39
         });
 
         // Cargar Sprite del Zombie (NUEVO NOMBRE)
         // Imagen: zombie.png (759x198). Calculamos 4 frames aprox: 759/4 = 189.
-        this.load.spritesheet('anim_zombie', 'assets/img/zombie.png', { 
-            frameWidth: 189, 
-            frameHeight: 198 
+        this.load.spritesheet('anim_zombie', 'assets/img/zombie.png', {
+            frameWidth: 189,
+            frameHeight: 198
         });
+        // --- Fondo tileable ---
+        this.load.image('background', 'assets/img/background.png');
+
     }
     //cOMENNTARIO
 
@@ -46,13 +49,27 @@ export default class GameScene extends Phaser.Scene {
         this.scoreDistance = 0;        // Metros recorridos
         this.mistakeTimestamps = [];   // Lista para guardar cuándo chocamos (para la regla de los 10s)
         this.zombieDistance = 100;     // Distancia de los zombies (100 = lejos, 0 = te comen)
-        
+
         // Guardamos ancho (w) y alto (h) de la pantalla para usarlo en fórmulas
         const w = this.scale.width;
         const h = this.scale.height;
-        
+
         // Definimos dónde estará el suelo (dejamos 120px abajo para botones)
-        this.groundY = h - 100; 
+        this.groundY = h - 100;
+
+        // Obtener tamaño original de la imagen
+        const bgTexture = this.textures.get('background').getSourceImage();
+        const scaleFactorY = this.scale.height / bgTexture.height;
+        const scaleFactorX = this.scale.width / bgTexture.width;
+
+        // Crear tileSprite con tamaño de la pantalla
+        this.bg = this.add.tileSprite(0, 0, this.scale.width, this.scale.height, 'background')
+            .setOrigin(0, 0)
+            .setScrollFactor(0);
+
+        // Escalar solo la textura, no el sprite
+        this.bg.tileScaleX = scaleFactorX;
+        this.bg.tileScaleY = scaleFactorY
 
         // --- 2. DEFINIR ANIMACIONES ---
         // Animación Correr: repeat -1 significa "infinito"
@@ -81,7 +98,7 @@ export default class GameScene extends Phaser.Scene {
 
         // --- 3. ESCENARIO (SUELO) ---
         // Creamos el rectángulo visual del suelo
-        this.ground = this.add.rectangle(w/2, this.groundY + 20, w, 20, 0x333333);
+        this.ground = this.add.rectangle(w / 2, this.groundY + 20, w, 20, 0x333333);
         // Le damos físicas estáticas (true) para que no se caiga ni se mueva
         this.physics.add.existing(this.ground, true);
 
@@ -89,10 +106,10 @@ export default class GameScene extends Phaser.Scene {
         // Creamos al jugador un poco más arriba para que caiga al suelo
         this.player = this.physics.add.sprite(180, this.groundY - 200, 'anim_run');
         this.player.play('run'); // Empieza a correr inmediatamente
-        
+
         // AJUSTE DE HITBOX (Caja de colisión invisible)
         // setSize: Hacemos la caja más estrecha (20px) para ser generosos con el jugador
-        this.player.body.setSize(10, 20); 
+        this.player.body.setSize(10, 20);
         // setOffset: Movemos la caja dentro del dibujo para alinearla con los pies
         this.player.body.setOffset(21, 18);
 
@@ -105,7 +122,7 @@ export default class GameScene extends Phaser.Scene {
         this.anims.create({
             key: 'zombie_run',
             frames: this.anims.generateFrameNumbers('anim_zombie', { start: 0, end: -1 }),
-            frameRate: 10, 
+            frameRate: 10,
             repeat: -1
         });
 
@@ -125,13 +142,13 @@ export default class GameScene extends Phaser.Scene {
         // Como tu imagen es de 759x198, el sprite es GRANDE. Ajustamos la caja.
         // Hacemos una caja de 40px de ancho y 80px de alto.
         this.zombieHorde.body.setSize(40, 80);
-        
+
         // Offset: Ajusta estos números para centrar la caja en el dibujo del zombie
         // (Al cambiar el tamaño de imagen, tendrás que retocar esto visualmente con debug:true)
-        this.zombieHorde.body.setOffset(75, 118); 
+        this.zombieHorde.body.setOffset(75, 118);
 
         // Texto del zombie
-        this.zombieText = this.add.text(50, this.groundY - 150, "¡RAAWR!", { fontSize: '12px', color: '#0f0'}).setOrigin(0.5);
+        this.zombieText = this.add.text(50, this.groundY - 150, "¡RAAWR!", { fontSize: '12px', color: '#0f0' }).setOrigin(0.5);
 
         // --- 6. GRUPO DE OBSTÁCULOS ---
         this.obstacles = this.physics.add.group({
@@ -165,6 +182,9 @@ export default class GameScene extends Phaser.Scene {
     // --- UPDATE: Bucle del juego (se ejecuta 60 veces por segundo) ---
     update(time, delta) {
         if (this.isGameOver) return; // Si perdiste, dejamos de actualizar todo
+
+        // --- MOVER FONDO ---
+        this.bg.tilePositionX += this.gameSpeed;
 
         // 1. Lógica de Puntuación
         this.scoreDistance += 0.05 * this.gameSpeed; // Sumamos distancia
@@ -208,12 +228,12 @@ export default class GameScene extends Phaser.Scene {
 
     performJump() {
         this.player.setVelocityY(-600); // Impulso hacia arriba (negativo es arriba en Phaser)
-        
+
         // Ajustamos la caja para el sprite de salto (54x43)
         // La hacemos más pequeña: 20x30
         this.player.body.setSize(20, 30);
         this.player.body.setOffset(17, 13); // Centrado aprox
-        
+
         // Lógica aleatoria para dar variedad visual
         if (Math.random() > 0.3) {
             this.player.play('jump');     // 70% Salto normal
@@ -226,11 +246,11 @@ export default class GameScene extends Phaser.Scene {
         // ESTA FUNCIÓN ES CRÍTICA: Cambia el tamaño del cuerpo físico
         if (isDucking) {
             // Si estamos agachados: Caja pequeña y baja
-            this.player.body.setSize(30, 30); 
-            this.player.body.setOffset(10, 34); 
+            this.player.body.setSize(30, 30);
+            this.player.body.setOffset(10, 34);
         } else {
             // Si estamos de pie: RESTAURAMOS los valores originales definidos en create()
-            this.player.body.setSize(10, 20); 
+            this.player.body.setSize(10, 20);
             this.player.body.setOffset(21, 18);
         }
     }
@@ -240,7 +260,7 @@ export default class GameScene extends Phaser.Scene {
 
         const w = this.scale.width;
         const groundY = this.groundY;
-        
+
         // 50% probabilidad de obstáculo bajo o alto
         const type = Math.random() > 0.5 ? 'low' : 'high';
         let obstacle;
@@ -258,7 +278,7 @@ export default class GameScene extends Phaser.Scene {
 
         this.physics.add.existing(obstacle);
         this.obstacles.add(obstacle); // Añadir al grupo
-        
+
         // Configuramos física del obstáculo
         obstacle.body.setAllowGravity(false); // Que flote
         obstacle.body.setImmovable(true);     // Que sea duro como una pared
@@ -270,7 +290,7 @@ export default class GameScene extends Phaser.Scene {
         obstacle.fillColor = 0x555555; // Cambia de color para indicar golpe
 
         this.zombieDistance -= 40; // Penalización: Los zombies se acercan
-        
+
         // Lógica de "2 fallos en 10 segundos = Muerte"
         const now = Date.now();
         this.mistakeTimestamps.push(now);
@@ -295,7 +315,7 @@ export default class GameScene extends Phaser.Scene {
         this.dangerBar.width = barWidth;
 
         // Movemos el cuadrado visual de los zombies detrás del jugador
-        const targetX = this.player.x - (this.zombieDistance * 3); 
+        const targetX = this.player.x - (this.zombieDistance * 3);
         this.zombieHorde.x = Phaser.Math.Linear(this.zombieHorde.x, targetX, 0.1);
         this.zombieText.x = this.zombieHorde.x;
 
@@ -340,7 +360,7 @@ export default class GameScene extends Phaser.Scene {
         this.isGameOver = true;
         this.physics.pause(); // Congela todas las físicas
         this.player.setTint(0xff0000); // Pone al jugador rojo
-        
+
         // Guardamos el récord en el navegador
         const currentBest = localStorage.getItem('parkour_highscore') || 0;
         if (this.scoreDistance > currentBest) {
