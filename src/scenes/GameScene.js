@@ -29,11 +29,12 @@ export default class GameScene extends Phaser.Scene {
             frameHeight: 39
         });
 
-        // Cargar Sprite del Zombie
-        this.load.spritesheet('anim_zombie', 'assets/img/Zombie_Run.png', { 
-        frameWidth: 32, // <--- ¡CAMBIA ESTO! (Ancho total / nº muñecos)
-        frameHeight: 32 // <--- ¡CAMBIA ESTO! (Alto de la imagen)
-    });
+        // Cargar Sprite del Zombie (NUEVO NOMBRE)
+        // Imagen: zombie.png (759x198). Calculamos 4 frames aprox: 759/4 = 189.
+        this.load.spritesheet('anim_zombie', 'assets/img/zombie.png', { 
+            frameWidth: 189, 
+            frameHeight: 198 
+        });
     }
 
     // --- CREATE: Se ejecuta una vez al empezar el juego ---
@@ -99,14 +100,42 @@ export default class GameScene extends Phaser.Scene {
         this.physics.add.collider(this.player, this.ground);
 
         // --- 5. ZOMBIES (VISUAL) ---
-        // Creamos el cuadrado verde y el texto que nos persigue
-        this.zombieHorde = this.add.rectangle(50, this.groundY - 50, 60, 80, 0x00ff00);
-        this.zombieText = this.add.text(50, this.groundY - 100, "¡RAAWR!", { fontSize: '12px', color: '#0f0'}).setOrigin(0.5);
+        // Definimos animación zombie
+        this.anims.create({
+            key: 'zombie_run',
+            frames: this.anims.generateFrameNumbers('anim_zombie', { start: 0, end: -1 }),
+            frameRate: 10, 
+            repeat: -1
+        });
+
+        // 2. CREAR EL SPRITE
+        // Lo creamos cayendo del cielo (-200) para asegurar que la gravedad actúe bien
+        this.zombieHorde = this.physics.add.sprite(50, this.groundY - 200, 'anim_zombie');
+        this.zombieHorde.play('zombie_run'); // ¡Que corran!
+
+        // IMPORTANTE: Física para que NO se caigan al vacío
+        this.zombieHorde.setCollideWorldBounds(true); // Choca con los bordes de pantalla
+        this.physics.add.collider(this.zombieHorde, this.ground); // Choca con el suelo (así camina sobre él)
+
+        this.zombieHorde.setDepth(1); // Para que se dibujen por encima del fondo
+        this.zombieHorde.setOrigin(0.5, 1); // Anclamos el sprite a sus pies
+
+        // AJUSTE DE HITBOX ZOMBIE
+        // Como tu imagen es de 759x198, el sprite es GRANDE. Ajustamos la caja.
+        // Hacemos una caja de 40px de ancho y 80px de alto.
+        this.zombieHorde.body.setSize(40, 80);
+        
+        // Offset: Ajusta estos números para centrar la caja en el dibujo del zombie
+        // (Al cambiar el tamaño de imagen, tendrás que retocar esto visualmente con debug:true)
+        this.zombieHorde.body.setOffset(75, 118); 
+
+        // Texto del zombie
+        this.zombieText = this.add.text(50, this.groundY - 150, "¡RAAWR!", { fontSize: '12px', color: '#0f0'}).setOrigin(0.5);
 
         // --- 6. GRUPO DE OBSTÁCULOS ---
         this.obstacles = this.physics.add.group({
             allowGravity: false, // Importante: Los obstáculos flotan (para los aéreos)
-            immovable: false      // Si chocas, el obstáculo no sale volando, es un muro
+            immovable: true      // CORREGIDO: Debe ser true o saldrán volando al chocar
         });
 
         // OVERLAP: Detecta contacto pero NO frena al jugador físicamente (lo atraviesas y recibes daño)
@@ -169,9 +198,9 @@ export default class GameScene extends Phaser.Scene {
         // Si aterrizamos en el suelo después de un salto, volvemos a la animación de correr
         if (this.player.body.touching.down && this.player.body.velocity.y >= 0) {
             if (this.player.anims.currentAnim && this.player.anims.currentAnim.key !== 'run') {
-            this.player.play('run', true);
+                this.player.play('run', true);
+            }
         }
-    }
     }
 
     // --- MÉTODOS DE ACCIÓN ---
@@ -200,8 +229,8 @@ export default class GameScene extends Phaser.Scene {
             this.player.body.setOffset(10, 34); 
         } else {
             // Si estamos de pie: RESTAURAMOS los valores originales definidos en create()
-            this.player.body.setSize(30, 50); 
-            this.player.body.setOffset(10, 14);
+            this.player.body.setSize(10, 20); 
+            this.player.body.setOffset(21, 18);
         }
     }
 
