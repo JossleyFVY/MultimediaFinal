@@ -18,7 +18,7 @@ const config = {
         default: 'arcade',
         arcade: {
             gravity: { y: 1000 }, // Gravedad fuerte para saltos rápidos tipo parkour
-            debug: false // Pon true para ver las cajas de colisión
+            debug: true // Pon true para ver las cajas de colisión
         }
     },
     scene: [BootScene, MainMenuScene, GameScene, GameOverScene]

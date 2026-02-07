@@ -16,13 +16,13 @@ export default class GameScene extends Phaser.Scene {
         });
 
         // Saltar 
-        this.load.spritesheet('anim_jump', 'assets/img/jump.png', {
-            frameWidth: 126, frameHeight: 100
+        this.load.spritesheet('anim_jump', 'assets/img/jumpA.png', {
+            frameWidth: 169, frameHeight: 100
         });
 
         // Pirueta 
         this.load.spritesheet('anim_pirouette', 'assets/img/jump2.png', {
-            frameWidth: 143, frameHeight: 89
+            frameWidth: 180, frameHeight: 97
         });
 
         // Agacharse 
@@ -146,7 +146,7 @@ export default class GameScene extends Phaser.Scene {
         this.bg.tilePositionX += this.gameSpeed;
         this.scoreDistance += 0.05 * this.gameSpeed;
         this.scoreText.setText(`Distancia: ${Math.floor(this.scoreDistance)}m`);
-        this.gameSpeed += 0.001;
+        this.gameSpeed += 0.005;// Aumento de la velocidad según avanzamos
 
         // 2. Detectar intención de agacharse
         const isDucking = this.cursors.down.isDown || this.duckBtnDown;
@@ -202,22 +202,47 @@ export default class GameScene extends Phaser.Scene {
     // =================================================================
 
     createAnimations() {
-        this.anims.create({ key: 'run', frames: this.anims.generateFrameNumbers('anim_run', { start: 0, end: -1 }), frameRate: 12, repeat: -1 });
-        this.anims.create({ key: 'jump', frames: this.anims.generateFrameNumbers('anim_jump', { start: 0, end: -1 }), frameRate: 12, repeat: 0 });
-        this.anims.create({ key: 'pirouette', frames: this.anims.generateFrameNumbers('anim_pirouette', { start: 0, end: -1 }), frameRate: 15, repeat: 0 });
-        this.anims.create({ key: 'duck', frames: this.anims.generateFrameNumbers('anim_duck', { start: 0, end: -1 }), frameRate: 12, repeat: -1 });
-        this.anims.create({ key: 'zombie_run', frames: this.anims.generateFrameNumbers('anim_zombie', { start: 0, end: -1 }), frameRate: 10, repeat: -1 });
+        this.anims.create({ key: 'run', 
+            frames: this.anims.generateFrameNumbers('anim_run', { 
+                start: 0, end: -1 
+            }), 
+            frameRate: 12, repeat: -1 
+        });
+        this.anims.create({ key: 'jump', 
+            frames: this.anims.generateFrameNumbers('anim_jump', { 
+                start: 0, end: -1 
+            }), 
+            frameRate: 6, repeat: 0 
+        });
+        this.anims.create({ key: 'pirouette', 
+            frames: this.anims.generateFrameNumbers('anim_pirouette', { 
+                start: 0, end: -1 
+            }), 
+            frameRate: 6, repeat: 0 
+        });
+        this.anims.create({ key: 'duck', 
+            frames: this.anims.generateFrameNumbers('anim_duck', { 
+                start: 0, end: -1 
+            }), 
+            frameRate: 9, repeat: -1 
+        });
+        this.anims.create({ key: 'zombie_run', 
+            frames: this.anims.generateFrameNumbers('anim_zombie', { 
+                start: 0, end: -1 
+            }), 
+            frameRate: 10, repeat: -1 
+        });
     }
 
     performJump() {
-        this.player.setVelocityY(-650); // Impulso hacia arriba
+        this.player.setVelocityY(-450); // Impulso hacia arriba
 
-        // Caja pequeña para el salto (40x80)
-        this.player.body.setSize(40, 80);
-        this.player.body.setOffset(45, 10); 
+        // Caja pequeña para el salto 
+        this.player.body.setSize(35, 90);
+        this.player.body.setOffset(49, 10); 
 
         // Probabilidad de hacer pirueta (30%)
-        if (Math.random() > 0.3) {
+        if (Math.random() > 0.4) {
             this.player.play('jump');
         } else {
             this.player.play('pirouette');
@@ -238,13 +263,13 @@ export default class GameScene extends Phaser.Scene {
             if (this.player.body.touching.down) {
                 this.player.y = this.groundY;
             }
-        } else {
+        } /*else {
             // --- MODO DE PIE ---
             // Solo restauramos la CAJA FÍSICA. 
             // NO tocamos la animación aquí para no romper el salto.
             this.player.body.setSize(50, 120);
             this.player.body.setOffset(50, 20);
-        }
+        }*/
     }
 
     spawnObstacle() {
@@ -264,7 +289,7 @@ export default class GameScene extends Phaser.Scene {
         } else {
             // --- MURO AÉREO (Hay que agacharse) ---
             const height = 400;
-            const gap = 100; // Hueco libre debajo del muro
+            const gap = 80; // Hueco libre debajo del muro
             // La colocamos flotando arriba
             const yPos = this.groundY - gap - (height / 2);
             obstacle = this.add.rectangle(w + 50, yPos, 50, height, 0xff0000);
@@ -279,6 +304,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     handleCollision(obstacle) {
+        //return;
         if (obstacle.hit) return; // Evitar múltiples impactos
         obstacle.hit = true;
         obstacle.fillColor = 0x555555; // Cambiar color al chocar
