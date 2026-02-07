@@ -46,10 +46,15 @@ export default class GameScene extends Phaser.Scene {
             frameWidth: 171, 
             frameHeight: 120 
         });
+    // --- Fondo tileable ---
+    this.load.image('background', 'assets/img/background.png');
 
-        // Fondo
-        this.load.image('background', 'assets/img/background.png');
-    }
+    // --- OBSTÁCULOS ---
+    // Obstaculos Suelo
+    this.load.image('obstaculoBarril', 'assets/img/obstaculoBarril.png');
+    this.load.image('obstaculoCoche', 'assets/img/obstaculoCoche.png');
+    this.load.image('obstaculoBarricada', 'assets/img/obstaculoBarricada.png');
+}
 
     // =================================================================
     // 2. CREATE: CONFIGURACIÓN INICIAL DEL MUNDO
@@ -124,13 +129,35 @@ export default class GameScene extends Phaser.Scene {
 
         this.zombieText = this.add.text(50, this.groundY - 160, "¡RAAWR!", { fontSize: '12px', color: '#0f0' }).setOrigin(0.5);
 
-        // --- GRUPO DE OBSTÁCULOS ---
-        this.obstacles = this.physics.add.group({
-            allowGravity: false, // Flotan
-            immovable: true      // Son sólidos como rocas
-        });
+        // --- 6. GRUPO DE OBSTÁCULOS ---
+this.obstacles = this.physics.add.group({
+    allowGravity: false, // Importante: Los obstáculos flotan (para los aéreos)
+    immovable: true      // CORREGIDO: Debe ser true o saldrán volando al chocar
+});
 
-        // Detectar colisión Jugador vs Obstáculo
+// Definimos los tipos de obstáculos del suelo con sus datos en un array
+this.groundObstacles = [
+    {
+        key: 'obstaculoBarril',
+        scale: 0.6,
+        yOffset: 10, // Para ajustar la posición vertical si es necesario
+        hitbox: { w: 60, h: 90, ox: 20, oy: 30 }
+    },
+    {
+        key: 'obstaculoCoche',
+        scale: 1.3,
+        yOffset: 50, // El coche es más alto, así que lo bajamos un poco para que toque el suelo
+        hitbox: { w: 150, h: 80, ox: 40, oy: 60 } // Especificamos hitbox personalizada para el coche
+    },
+    {
+        key: 'obstaculoBarricada',
+        scale: 1.2,
+        yOffset: 10,
+        hitbox: { w: 100, h: 180, ox: 30, oy: 40 }
+    }
+];
+
+// Detectar colisión Jugador vs Obstáculo
         this.physics.add.overlap(this.player, this.obstacles, (player, obstacle) => {
             this.handleCollision(obstacle);
         });
@@ -293,35 +320,54 @@ export default class GameScene extends Phaser.Scene {
     }
 
     spawnObstacle() {
-        if (this.isGameOver) return;
+    if (this.isGameOver) return;
 
         const w = this.scale.width;
         // 50% de probabilidad
         const type = Math.random() > 0.5 ? 'low' : 'high';
         let obstacle;
 
-        if (type === 'low') {
-            // --- CAJA EN EL SUELO (Hay que saltar) ---
-            const height = 70;
-            // La colocamos pegada al suelo
-            const yPos = this.groundY - (height / 2);
-            obstacle = this.add.rectangle(w + 45, yPos, 25, height, 0xff0000);
-        } else {
-            // --- MURO AÉREO (Hay que agacharse) ---
-            const height = 400;
-            const gap = 80; // Hueco libre debajo del muro
-            // La colocamos flotando arriba
-            const yPos = this.groundY - gap - (height / 2);
-            obstacle = this.add.rectangle(w + 50, yPos, 70, height, 0xff0000);
-        }
+    if (type === 'low') {
+        const data = Phaser.Utils.Array.GetRandom(this.groundObstacles);
 
+        obstacle = this.physics.add.sprite(
+            w + 100,
+            this.groundY + data.yOffset,
+            data.key
+        )
+        .setOrigin(0.5, 1)
+        .setScale(data.scale);
+
+        // HITBOX CONTROLADA POR VARIABLES
+        obstacle.body.setSize(
+            data.hitbox.w,
+            data.hitbox.h
+        );
+
+        obstacle.body.setOffset(
+            data.hitbox.ox,
+            data.hitbox.oy
+        );
+
+        // Alternar obstáculo
+        this.groundObstacleIndex =
+            (this.groundObstacleIndex + 1) % this.groundObstacles.length;
+
+    } else {
+        // OBSTÁCULO AÉREO
+        const height = 400;
+        const gap = 80;
+        const yPos = this.groundY - gap - (height / 2);
+
+        obstacle = this.add.rectangle(w + 50, yPos, 70, height, 0xff0000, 0);
         this.physics.add.existing(obstacle);
-        this.obstacles.add(obstacle);
-        
-        // El obstáculo flota y es duro
-        obstacle.body.setAllowGravity(false);
-        obstacle.body.setImmovable(true);
     }
+
+    this.obstacles.add(obstacle);
+
+    obstacle.body.setAllowGravity(false);
+    obstacle.body.setImmovable(true);
+}
 
     handleCollision(obstacle) {
         //return;
