@@ -12,28 +12,39 @@ export default class GameScene extends Phaser.Scene {
         // --- JUGADOR ---
         // Correr 
         this.load.spritesheet('anim_run', 'assets/img/run.png', {
-            frameWidth: 152, frameHeight: 140
+            frameWidth: 152, 
+            frameHeight: 140
         });
 
         // Saltar 
         this.load.spritesheet('anim_jump', 'assets/img/jumpA.png', {
-            frameWidth: 169, frameHeight: 100
+            frameWidth: 169, 
+            frameHeight: 100
         });
 
         // Pirueta 
         this.load.spritesheet('anim_pirouette', 'assets/img/jump2.png', {
-            frameWidth: 180, frameHeight: 97
+            frameWidth: 180, 
+            frameHeight: 97
         });
 
         // Agacharse 
         this.load.spritesheet('anim_duck', 'assets/img/down.png', { 
-            frameWidth: 119, frameHeight: 100 
+            frameWidth: 119, 
+            frameHeight: 100 
         });
 
         // --- ENEMIGOS Y FONDO ---
-        // Zombie (145x140)
+        // Zombie 
         this.load.spritesheet('anim_zombie', 'assets/img/zombie1.png', { 
-            frameWidth: 145, frameHeight: 140
+            frameWidth: 145, 
+            frameHeight: 140
+        });
+
+        // Animación de Muerte (Zombie mordiendo)
+        this.load.spritesheet('anim_bite', 'assets/img/morder.png', { 
+            frameWidth: 171, 
+            frameHeight: 120 
         });
 
         // Fondo
@@ -95,6 +106,13 @@ export default class GameScene extends Phaser.Scene {
         // --- ZOMBIE ---
         this.zombieHorde = this.physics.add.sprite(50, this.groundY, 'anim_zombie').setOrigin(0.5, 1);
         this.zombieHorde.play('zombie_run');
+        // Morder
+        this.anims.create({
+            key: 'bite',
+            frames: this.anims.generateFrameNumbers('anim_bite', { start: 0, end: -1 }),
+            frameRate: 2, // Ajusta la velocidad si muerden muy rápido
+            repeat: 0      // 0 = Lo hace una vez y para (no queremos que lo muerda infinitamente en bucle)
+        });
         
         this.zombieHorde.setCollideWorldBounds(true);
         this.physics.add.collider(this.zombieHorde, this.ground);
@@ -130,8 +148,10 @@ export default class GameScene extends Phaser.Scene {
         });
 
         // Interfaz de Usuario (UI)
-        this.scoreText = this.add.text(20, 22, 'Distancia: 0m', { fontSize: '20px', fill: '#fff' });
-        this.add.text(w - 200, 22, 'Peligro:', { fontSize: '16px', fill: '#fff' });
+        this.scoreText = this.add.text(20, 22, 'Distancia: 0m', { 
+            fontSize: '20px', fill: '#fff' });
+        this.add.text(w - 200, 22, 'Peligro:', { 
+            fontSize: '16px', fill: '#fff' });
         this.dangerBar = this.add.rectangle(w - 20, 30, 100, 10, 0xff0000).setOrigin(1, 0.5);
     }
 
@@ -285,14 +305,14 @@ export default class GameScene extends Phaser.Scene {
             const height = 70;
             // La colocamos pegada al suelo
             const yPos = this.groundY - (height / 2);
-            obstacle = this.add.rectangle(w + 50, yPos, 50, height, 0xff0000);
+            obstacle = this.add.rectangle(w + 45, yPos, 25, height, 0xff0000);
         } else {
             // --- MURO AÉREO (Hay que agacharse) ---
             const height = 400;
             const gap = 80; // Hueco libre debajo del muro
             // La colocamos flotando arriba
             const yPos = this.groundY - gap - (height / 2);
-            obstacle = this.add.rectangle(w + 50, yPos, 50, height, 0xff0000);
+            obstacle = this.add.rectangle(w + 50, yPos, 70, height, 0xff0000);
         }
 
         this.physics.add.existing(obstacle);
@@ -368,16 +388,39 @@ export default class GameScene extends Phaser.Scene {
     }
 
     triggerGameOver() {
+        // Evitar que se ejecute dos veces
+        if (this.isGameOver) return;
         this.isGameOver = true;
-        this.physics.pause();
-        this.player.setTint(0xff0000);
 
+        // 1. Congelar físicas y movimientos
+        this.physics.pause();
+        
+        // 2. Ocultar los personajes que están corriendo
+        this.player.setVisible(false);
+        this.zombieHorde.setVisible(false);
+        // Opcional: Ocultar texto "RAAWR"
+        this.zombieText.setVisible(false); 
+
+        // 3. CREAR EL SPRITE DE LA MORDIDA
+        // Lo ponemos en la X del jugador y la Y del suelo (groundY)
+        const deathSprite = this.add.sprite(this.player.x, this.groundY, 'anim_bite');
+        
+        // Configuración para que pise bien el suelo
+        deathSprite.setOrigin(0.5, 1); 
+        // Si se ve pequeño, descomenta la siguiente línea:
+        // deathSprite.setScale(1.2); 
+
+        // 4. Reproducir la animación
+        deathSprite.play('bite');
+
+        // 5. Guardar récord
         const currentBest = localStorage.getItem('parkour_highscore') || 0;
         if (this.scoreDistance > currentBest) {
             localStorage.setItem('parkour_highscore', Math.floor(this.scoreDistance));
         }
 
-        this.time.delayedCall(1500, () => {
+        // 6. Esperar 3 segundos (para que nos dé tiempo a ver la animación) e ir a Game Over
+        this.time.delayedCall(3000, () => {
             this.scene.start('GameOverScene', { score: Math.floor(this.scoreDistance) });
         });
     }
