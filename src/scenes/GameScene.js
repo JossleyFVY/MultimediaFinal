@@ -37,9 +37,18 @@ export default class GameScene extends Phaser.Scene {
         });
         // --- Fondo tileable ---
         this.load.image('background', 'assets/img/background.png');
+<<<<<<< Updated upstream
 
     }
     //cOMENNTARIO
+=======
+        // --- OBSTÁCULOS ---
+        // Obstaculos Suelo
+        this.load.image('obstaculoBarril', 'assets/img/obstaculoBarril.png');
+        this.load.image('obstaculoCoche', 'assets/img/obstaculoCoche.png');
+        this.load.image('obstaculoBarricada', 'assets/img/obstaculoBarricada.png');
+        }
+>>>>>>> Stashed changes
 
     // --- CREATE: Se ejecuta una vez al empezar el juego ---
     create() {
@@ -156,7 +165,33 @@ export default class GameScene extends Phaser.Scene {
             immovable: true      // CORREGIDO: Debe ser true o saldrán volando al chocar
         });
 
+<<<<<<< Updated upstream
         // OVERLAP: Detecta contacto pero NO frena al jugador físicamente (lo atraviesas y recibes daño)
+=======
+        // Definimos los tipos de obstáculos del suelo con sus datos en un array
+        this.groundObstacles = [
+            {
+                key: 'obstaculoBarril',
+                scale: 0.6,
+                yOffset: 10, // Para ajustar la posición vertical si es necesario
+                hitbox: { w: 60, h: 90, ox: 20, oy: 30 }
+            },
+            {
+                key: 'obstaculoCoche',
+                scale: 1.3,
+                yOffset: 50, // El coche es más alto, así que lo bajamos un poco para que toque el suelo
+                hitbox: { w: 200, h: 80, ox: 40, oy: 60 } // Especificamos hitbox personalizada para el coche
+            },
+            {
+                key: 'obstaculoBarricada',
+                scale: 1.2,
+                yOffset: 10,
+                hitbox: { w: 125, h: 180, ox: 30, oy: 40 }
+            }
+        ];
+
+        // Detectar colisión Jugador vs Obstáculo
+>>>>>>> Stashed changes
         this.physics.add.overlap(this.player, this.obstacles, (player, obstacle) => {
             this.handleCollision(obstacle);
         });
@@ -256,8 +291,9 @@ export default class GameScene extends Phaser.Scene {
     }
 
     spawnObstacle() {
-        if (this.isGameOver) return;
+    if (this.isGameOver) return;
 
+<<<<<<< Updated upstream
         const w = this.scale.width;
         const groundY = this.groundY;
 
@@ -275,14 +311,61 @@ export default class GameScene extends Phaser.Scene {
             const yPos = groundY - gap - (height / 2); // Matemáticas para colocarlo
             obstacle = this.add.rectangle(w + 50, yPos, 50, height, 0xff0000);
         }
+=======
+    const w = this.scale.width;
+    const type = Math.random() > 0.5 ? 'low' : 'high';
+    let obstacle;
 
+    if (type === 'low') {
+        const data = Phaser.Utils.Array.GetRandom(this.groundObstacles); // Tomamos el siguiente obstáculo del suelo según el índice
+>>>>>>> Stashed changes
+
+        obstacle = this.physics.add.sprite(
+        w + 100,
+        this.groundY + data.yOffset,
+        data.key
+        )
+        .setOrigin(0.5, 1)
+        .setScale(data.scale);
+
+        // HITBOX CONTROLADA POR VARIABLES
+        obstacle.body.setSize(
+            data.hitbox.w,
+            data.hitbox.h
+        );
+
+        obstacle.body.setOffset(
+            data.hitbox.ox,
+            data.hitbox.oy
+        );
+
+        // Alternar obstáculo
+        this.groundObstacleIndex =
+            (this.groundObstacleIndex + 1) % this.groundObstacles.length; // Esto hace que el índice vuelva a 0 después de llegar al último obstáculo
+
+    } else {
+        // OBSTÁCULO AÉREO
+        const height = 400;
+        const gap = 80;
+        const yPos = this.groundY - gap - (height / 2);
+
+        obstacle = this.add.rectangle(w + 50, yPos, 70, height, 0xff0000, 0);
         this.physics.add.existing(obstacle);
+<<<<<<< Updated upstream
         this.obstacles.add(obstacle); // Añadir al grupo
 
         // Configuramos física del obstáculo
         obstacle.body.setAllowGravity(false); // Que flote
         obstacle.body.setImmovable(true);     // Que sea duro como una pared
+=======
+>>>>>>> Stashed changes
     }
+
+    this.obstacles.add(obstacle);
+
+    obstacle.body.setAllowGravity(false);
+    obstacle.body.setImmovable(true);
+}
 
     handleCollision(obstacle) {
         if (obstacle.hit) return; // Evita que un mismo obstáculo te quite vida 60 veces por segundo
