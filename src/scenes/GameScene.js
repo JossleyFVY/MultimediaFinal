@@ -72,7 +72,7 @@ export default class GameScene extends Phaser.Scene {
 
         // --- LÍNEA DEL SUELO ---
         // 'groundY' marca la posición Y exacta donde apoyan los pies.
-        this.groundY = h - 80; 
+        this.groundY = h - 50; 
 
         // --- FONDO INFINITO ---
         const bgTexture = this.textures.get('background').getSourceImage();
@@ -127,7 +127,7 @@ export default class GameScene extends Phaser.Scene {
         this.zombieHorde.body.setSize(50, 120);
         this.zombieHorde.body.setOffset(50, 20);
 
-        this.zombieText = this.add.text(50, this.groundY - 160, "¡RAAWR!", { fontSize: '12px', color: '#0f0' }).setOrigin(0.5);
+        this.zombieText = this.add.text(50, this.groundY - 160, "¡RAAWR!", { fontSize: '12px', color: 'rgb(7, 7, 7)' }).setOrigin(0.5);
 
         // --- 6. GRUPO DE OBSTÁCULOS ---
 this.obstacles = this.physics.add.group({
@@ -141,19 +141,19 @@ this.groundObstacles = [
         key: 'obstaculoBarril',
         scale: 0.6,
         yOffset: 10, // Para ajustar la posición vertical si es necesario
-        hitbox: { w: 60, h: 90, ox: 20, oy: 30 }
+        hitbox: { w: 60, h: 90, ox: 5, oy: 30 }
     },
     {
         key: 'obstaculoCoche',
-        scale: 1.3,
-        yOffset: 50, // El coche es más alto, así que lo bajamos un poco para que toque el suelo
-        hitbox: { w: 150, h: 80, ox: 40, oy: 60 } // Especificamos hitbox personalizada para el coche
+        scale: 1.35,
+        yOffset: 60, // El coche es más alto, así que lo bajamos un poco para que toque el suelo
+        hitbox: { w: 90, h: 40, ox: 45, oy: 50 } // Especificamos hitbox personalizada para el coche
     },
     {
         key: 'obstaculoBarricada',
-        scale: 1.2,
-        yOffset: 10,
-        hitbox: { w: 100, h: 180, ox: 30, oy: 40 }
+        scale: 1.3,
+        yOffset: 20,
+        hitbox: { w: 50, h: 50, ox: 18, oy: 30 }
     }
 ];
 
@@ -193,7 +193,7 @@ this.groundObstacles = [
         this.bg.tilePositionX += this.gameSpeed;
         this.scoreDistance += 0.05 * this.gameSpeed;
         this.scoreText.setText(`Distancia: ${Math.floor(this.scoreDistance)}m`);
-        this.gameSpeed += 0.005;// Aumento de la velocidad según avanzamos
+        this.gameSpeed += 0.002;// Aumento de la velocidad según avanzamos
 
         // 2. Detectar intención de agacharse
         const isDucking = this.cursors.down.isDown || this.duckBtnDown;
@@ -240,7 +240,7 @@ this.groundObstacles = [
             // 2. Frenamos cualquier velocidad de caída residual
             this.player.body.velocity.y = 0;
             
-            // 3. Le decimos a Phaser "Oye, que estamos tocando suelo"
+            // 3. Le decimos que estamos tocando suelo
             this.player.body.touching.down = true; 
         }
     }
@@ -319,7 +319,7 @@ this.groundObstacles = [
         }*/
     }
 
-    spawnObstacle() {
+   spawnObstacle() {
     if (this.isGameOver) return;
 
         const w = this.scale.width;
