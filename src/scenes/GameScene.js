@@ -43,7 +43,7 @@ export default class GameScene extends Phaser.Scene {
 
         // Animación de Muerte (Zombie mordiendo)
         this.load.spritesheet('anim_bite', 'assets/img/morder.png', { 
-            frameWidth: 171, 
+            frameWidth: 204, 
             frameHeight: 120 
         });
     // --- Fondo tileable ---
@@ -115,7 +115,7 @@ export default class GameScene extends Phaser.Scene {
         this.anims.create({
             key: 'bite',
             frames: this.anims.generateFrameNumbers('anim_bite', { start: 0, end: -1 }),
-            frameRate: 2, // Ajusta la velocidad si muerden muy rápido
+            frameRate: 3, // Ajusta la velocidad si muerden muy rápido
             repeat: 0      // 0 = Lo hace una vez y para (no queremos que lo muerda infinitamente en bucle)
         });
         
