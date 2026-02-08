@@ -139,21 +139,21 @@ this.obstacles = this.physics.add.group({
 this.groundObstacles = [
     {
         key: 'obstaculoBarril',
-        scale: 0.6,
-        yOffset: 10, // Para ajustar la posición vertical si es necesario
+        scale: 0.7,
+        yOffset: 20, // Para ajustar la posición vertical si es necesario
         hitbox: { w: 60, h: 90, ox: 5, oy: 30 }
     },
     {
         key: 'obstaculoCoche',
-        scale: 1.35,
-        yOffset: 60, // El coche es más alto, así que lo bajamos un poco para que toque el suelo
-        hitbox: { w: 90, h: 40, ox: 45, oy: 50 } // Especificamos hitbox personalizada para el coche
+        scale: 1.45,
+        yOffset: 75, // El coche es más alto, así que lo bajamos un poco para que toque el suelo
+        hitbox: { w: 100, h: 30, ox: 50, oy: 50 } // Especificamos hitbox personalizada para el coche
     },
     {
         key: 'obstaculoBarricada',
         scale: 1.3,
-        yOffset: 20,
-        hitbox: { w: 50, h: 50, ox: 18, oy: 30 }
+        yOffset: 35,
+        hitbox: { w: 50, h: 50, ox: 20, oy: 90 }
     }
 ];
 
@@ -177,9 +177,9 @@ this.groundObstacles = [
         // Interfaz de Usuario (UI)
         this.scoreText = this.add.text(20, 22, 'Distancia: 0m', { 
             fontSize: '20px', fill: '#fff' });
-        this.add.text(w - 200, 22, 'Peligro:', { 
+        this.add.text(w - 220, 22, 'Peligro:', { 
             fontSize: '16px', fill: '#fff' });
-        this.dangerBar = this.add.rectangle(w - 20, 30, 100, 10, 0xff0000).setOrigin(1, 0.5);
+        this.dangerBar = this.add.rectangle(w - 30, 30, 100, 10, 0xff0000).setOrigin(1, 0.5);
     }
 
     // =================================================================
@@ -358,8 +358,8 @@ this.groundObstacles = [
         const height = 400;
         const gap = 80;
         const yPos = this.groundY - gap - (height / 2);
-
-        obstacle = this.add.rectangle(w + 50, yPos, 70, height, 0xff0000, 0);
+        
+        obstacle = this.add.rectangle(w + 50, yPos, 70, height, 0xff0000);
         this.physics.add.existing(obstacle);
     }
 
@@ -370,7 +370,7 @@ this.groundObstacles = [
 }
 
     handleCollision(obstacle) {
-        //return;
+        return;
         if (obstacle.hit) return; // Evitar múltiples impactos
         obstacle.hit = true;
         obstacle.fillColor = 0x555555; // Cambiar color al chocar
@@ -399,9 +399,9 @@ this.groundObstacles = [
         this.dangerBar.width = barWidth;
 
         // Movimiento suave del zombie
-        const targetX = this.player.x - (this.zombieDistance * 3);
+        const targetX = this.player.x - (this.zombieDistance * 2);
         this.zombieHorde.x = Phaser.Math.Linear(this.zombieHorde.x, targetX, 0.1);
-        this.zombieText.x = this.zombieHorde.x;
+        this.zombieText.x = this.zombieHorde.x + 50;
 
         // Chequeo de Game Over (Distancia o Contacto físico)
         if (this.zombieDistance <= 0) this.triggerGameOver();
