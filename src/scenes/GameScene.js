@@ -469,7 +469,7 @@ export default class GameScene extends Phaser.Scene {
         this.dangerBar.width = barWidth;
 
         // Movimiento suave del zombie
-        const targetX = this.player.x - (this.zombieDistance * 2);
+        const targetX = this.player.x - (this.zombieDistance * 3);
         this.zombieHorde.x = Phaser.Math.Linear(this.zombieHorde.x, targetX, 0.1);
         this.zombieText.x = this.zombieHorde.x + 50;
 
