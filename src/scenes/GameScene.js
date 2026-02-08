@@ -9,7 +9,7 @@ export default class GameScene extends Phaser.Scene {
     // 1. PRELOAD: CARGA DE IMÁGENES Y RECURSOS
     // =================================================================
     preload() {
-        // --- JUGADOR ---
+        // --- JUGADOR ---=================================================================
         // Correr 
         this.load.spritesheet('anim_run', 'assets/img/run.png', {
             frameWidth: 152, 
@@ -34,7 +34,7 @@ export default class GameScene extends Phaser.Scene {
             frameHeight: 100 
         });
 
-        // --- ENEMIGOS Y FONDO ---
+        // --- ENEMIGOS Y FONDO ---=================================================================
         // Zombie 
         this.load.spritesheet('anim_zombie', 'assets/img/zombie1.png', { 
             frameWidth: 145, 
@@ -46,21 +46,21 @@ export default class GameScene extends Phaser.Scene {
             frameWidth: 204, 
             frameHeight: 120 
         });
-    // --- Fondo tileable ---
-    this.load.image('background', 'assets/img/background.png');
+        // --- Fondo tileable ---
+        this.load.image('background', 'assets/img/background.png');
 
-    // --- OBSTÁCULOS ---
-    // Obstaculos Suelo
-    this.load.image('obstaculoBarril', 'assets/img/obstaculoBarril.png');
-    this.load.image('obstaculoCoche', 'assets/img/obstaculoCoche.png');
-    this.load.image('obstaculoBarricada', 'assets/img/obstaculoBarricada.png');
+        // --- OBSTÁCULOS ---=================================================================
+        // Obstaculos Suelo
+        this.load.image('obstaculoBarril', 'assets/img/obstaculoBarril.png');
+        this.load.image('obstaculoCoche', 'assets/img/obstaculoCoche.png');
+        this.load.image('obstaculoBarricada', 'assets/img/obstaculoBarricada.png');
 
-    // Obstáculos altos
-    this.load.image('obstaculo_tuberia', 'assets/img/obstaculo_tuberia.png');
-    this.load.image('obstaculo_viga', 'assets/img/obstaculo_viga.png');
-    this.load.image('obstaculo_grua', 'assets/img/obstaculo_grua.png');
-    this.load.image('obstaculo_tunel', 'assets/img/obstaculo_tunel.png');
-}
+        // Obstáculos altos
+        this.load.image('obstaculo_tuberia', 'assets/img/obstaculo_tuberia1.png');
+        this.load.image('obstaculo_viga', 'assets/img/obstaculo_viga.png');
+        this.load.image('obstaculo_grua', 'assets/img/obstaculo_grua1.png');
+        this.load.image('obstaculo_tunel', 'assets/img/obstaculo_tunel1.png');
+    }
 
     // =================================================================
     // 2. CREATE: CONFIGURACIÓN INICIAL DEL MUNDO
@@ -77,14 +77,17 @@ export default class GameScene extends Phaser.Scene {
         this.mistakeTimestamps = [];   // Registro de golpes (para la regla de los 10s)
         this.zombieDistance = 100;     // Distancia de la horda
 
+        // NUEVO: Variable para recordar cuál fue el último obstáculo y no repetirlo
+        this.lastObstacleKey = null; 
+
         const w = this.scale.width;
         const h = this.scale.height;
 
-        // --- LÍNEA DEL SUELO ---
+        // --- LÍNEA DEL SUELO ---=================================================================
         // 'groundY' marca la posición Y exacta donde apoyan los pies.
         this.groundY = h - 50; 
 
-        // --- FONDO INFINITO ---
+        // --- FONDO INFINITO ---=================================================================
         const bgTexture = this.textures.get('background').getSourceImage();
         const scaleY = this.scale.height / bgTexture.height;
         const scaleX = this.scale.width / bgTexture.width;
@@ -95,17 +98,17 @@ export default class GameScene extends Phaser.Scene {
         this.bg.tileScaleX = scaleX;
         this.bg.tileScaleY = scaleY;
 
-        // --- CREACIÓN DE ANIMACIONES ---
+        // --- CREACIÓN DE ANIMACIONES ---=================================================================
         this.createAnimations();
 
-        // --- SUELO FÍSICO (INVISIBLE) ---
+        // --- SUELO FÍSICO (INVISIBLE) ---=================================================================
         // Creamos un rectángulo físico para que el jugador no caiga al vacío.
         // Lo ponemos invisible con setVisible(false).
         this.ground = this.add.rectangle(w / 2, this.groundY + 25, w, 50, 0x333333);
         this.ground.setVisible(false); 
         this.physics.add.existing(this.ground, true); // true = Estático (muro)
 
-        // --- JUGADOR ---
+        // --- JUGADOR ---=================================================================
         // setOrigin(0.5, 1): El punto de anclaje son los PIES.
         // Posición: X=250 (adelantado), Y=groundY (pegado al suelo).
         this.player = this.physics.add.sprite(250, this.groundY, 'anim_run').setOrigin(0.5, 1);
@@ -140,64 +143,63 @@ export default class GameScene extends Phaser.Scene {
 
         this.zombieText = this.add.text(50, this.groundY - 160, "¡RAAWR!", { fontSize: '12px', color: 'rgb(7, 7, 7)' }).setOrigin(0.5);
 
-        // --- 6. GRUPO DE OBSTÁCULOS ---
-this.obstacles = this.physics.add.group({
-    allowGravity: false, // Importante: Los obstáculos flotan (para los aéreos)
-    immovable: true      // CORREGIDO: Debe ser true o saldrán volando al chocar
-});
+        // --- 6. GRUPO DE OBSTÁCULOS ---=================================================================
+        this.obstacles = this.physics.add.group({
+            allowGravity: false, // Importante: Los obstáculos flotan (para los aéreos)
+            immovable: true      // CORREGIDO: Debe ser true o saldrán volando al chocar
+        });
 
-// Definimos los tipos de obstáculos del suelo con sus datos en un array
-this.groundObstacles = [
-    {
-        key: 'obstaculoBarril',
-        scale: 0.7,
-        yOffset: 20, // Para ajustar la posición vertical si es necesario
-        hitbox: { w: 60, h: 90, ox: 5, oy: 30 }
-    },
-    {
-        key: 'obstaculoCoche',
-        scale: 1.45,
-        yOffset: 75, // El coche es más alto, así que lo bajamos un poco para que toque el suelo
-        hitbox: { w: 100, h: 30, ox: 50, oy: 50 } // Especificamos hitbox personalizada para el coche
-    },
-    {
-        key: 'obstaculoBarricada',
-        scale: 1.3,
-        yOffset: 35,
-        hitbox: { w: 50, h: 50, ox: 20, oy: 90 }
-    }
-];
+        // Definimos los tipos de obstáculos del suelo con sus datos en un array
+        this.groundObstacles = [
+            {
+                key: 'obstaculoBarril',
+                scale: 0.7,
+                yOffset: 20, // Para ajustar la posición vertical si es necesario
+                hitbox: { w: 60, h: 90, ox: 5, oy: 30 }
+            },
+            {
+                key: 'obstaculoCoche',
+                scale: 1.45,
+                yOffset: 75, // El coche es más alto, así que lo bajamos un poco para que toque el suelo
+                hitbox: { w: 100, h: 30, ox: 50, oy: 50 } // Especificamos hitbox personalizada para el coche
+            },
+            {
+                key: 'obstaculoBarricada',
+                scale: 1.3,
+                yOffset: 35,
+                hitbox: { w: 50, h: 50, ox: 20, oy: 90 }
+            }
+        ];
 
-// Definimos los tipos de obstáculos aéreos
-this.airObstacles = [
-    {
-        key: 'obstaculo_tuberia',
-        scale: 0.5,
-        yOffset: 25,
-        hitbox: { w: 330, h: 260, ox: 240, oy: -100 }  // Hitbox más grande y sin offset
-    },
-    {
-        key: 'obstaculo_viga',
-        scale: 0.5,
-        yOffset: 25,
-        hitbox: { w: 140, h: 800, ox: 0, oy: 0 }
-    },
-    {
-        key: 'obstaculo_grua',
-        scale: 0.5,
-        yOffset: 0,
-        hitbox: { w: 110, h: 350, ox: 600, oy: -100 }
-    },
-    {
-        key: 'obstaculo_tunel',
-        scale: 0.4,
-        yOffset: 20,
-        hitbox: { w: 500, h: 300, ox: 0, oy: 0 }
-    }
-];
+        // Definimos los tipos de obstáculos aéreos
+        this.airObstacles = [
+            {
+                key: 'obstaculo_tuberia',
+                scale: 0.5,
+                yOffset: 50,
+                hitbox: { w: 180, h: 260, ox: 340, oy: -40 }  // Hitbox más grande y sin offset
+            },
+            {
+                key: 'obstaculo_viga',
+                scale: 0.5,
+                yOffset: 25,
+                hitbox: { w: 140, h: 800, ox: 0, oy: 0 }
+            },
+            {
+                key: 'obstaculo_grua',
+                scale: 0.5,
+                yOffset: 20,
+                hitbox: { w: 110, h: 550, ox: 1100, oy: -50 }
+            },
+            /*{
+                key: 'obstaculo_tunel',
+                scale: 0.4,
+                yOffset: 20,
+                hitbox: { w: 500, h: 300, ox: 0, oy: 150 }
+            }*/
+        ];
 
-
-// Detectar colisión Jugador vs Obstáculo
+        // Detectar colisión Jugador vs Obstáculo
         this.physics.add.overlap(this.player, this.obstacles, (player, obstacle) => {
             this.handleCollision(obstacle);
         });
@@ -225,7 +227,7 @@ this.airObstacles = [
     // =================================================================
     // 3. UPDATE: BUCLE PRINCIPAL (60 VECES/SEG)
     // =================================================================
-    // --- UPDATE: Bucle principal ---
+    // --- UPDATE: Bucle principal ---=================================================================
     update(time, delta) {
         if (this.isGameOver) return;
 
@@ -238,7 +240,7 @@ this.airObstacles = [
         // 2. Detectar intención de agacharse
         const isDucking = this.cursors.down.isDown || this.duckBtnDown;
 
-        // --- CONTROLES ---
+        // --- CONTROLES ---=================================================================
         
         // Salto (Solo si toca el suelo)
         if ((this.cursors.up.isDown || this.jumpBtnDown) && this.player.body.touching.down) {
@@ -248,15 +250,21 @@ this.airObstacles = [
         // Agacharse
         this.performDuck(isDucking);
 
-        // --- OBSTÁCULOS ---
+        // --- OBSTÁCULOS ---=================================================================
         this.obstacles.getChildren().forEach(obstacle => {
             obstacle.x -= this.gameSpeed;
-            if (obstacle.x < -100) obstacle.destroy();
+            
+            
+            // Esto es porque la grúa es muy ancha y tiene mucho offset. 
+            // Si lo borramos a -100, desaparece visualmente cuando aún está en pantalla.
+            if (obstacle.x < -1200) {
+                obstacle.destroy();
+            }
         });
 
         this.updateZombies();
 
-        // --- RECUPERACIÓN DE ANIMACIÓN (Correr) ---
+        // --- RECUPERACIÓN DE ANIMACIÓN (Correr) ---=================================================================
         // Si tocamos el suelo y NO estamos agachados, volvemos a correr
         if (this.player.body.touching.down && this.player.body.velocity.y >= 0 && !isDucking) {
             if (this.player.anims.currentAnim && this.player.anims.currentAnim.key !== 'run') {
@@ -336,9 +344,9 @@ this.airObstacles = [
         }
     }
 
-   performDuck(isDucking) {
+    performDuck(isDucking) {
         if (isDucking) {
-            // --- MODO AGACHADO ---
+            // --- MODO AGACHADO ---=================================================================
             this.player.body.setSize(50, 60);
             this.player.body.setOffset(34, 40); 
             
@@ -350,83 +358,89 @@ this.airObstacles = [
             if (this.player.body.touching.down) {
                 this.player.y = this.groundY;
             }
-        } /*else {
-            // --- MODO DE PIE ---
-            // Solo restauramos la CAJA FÍSICA. 
-            // NO tocamos la animación aquí para no romper el salto.
-            this.player.body.setSize(50, 120);
-            this.player.body.setOffset(50, 20);
-        }*/
+        } 
     }
 
-   spawnObstacle() {
-    if (this.isGameOver) return;
+    spawnObstacle() {
+        if (this.isGameOver) return;
 
         const w = this.scale.width;
         // 50% de probabilidad
         const type = Math.random() > 0.5 ? 'low' : 'high';
         let obstacle;
+        let data; // NUEVO: Variable auxiliar para guardar los datos antes de crear
 
-    if (type === 'low') {
-        const data = Phaser.Utils.Array.GetRandom(this.groundObstacles);
+        if (type === 'low') {
+            // NUEVO: Filtramos la lista de obstáculos para quitar el último que salió
+            let candidates = this.groundObstacles.filter(o => o.key !== this.lastObstacleKey);
+            
+            // Si la lista se queda vacía (solo hay un tipo), usamos la original para no fallar
+            if (candidates.length === 0) candidates = this.groundObstacles;
 
-        obstacle = this.physics.add.sprite(
-            w + 100,
-            this.groundY + data.yOffset,
-            data.key
-        )
-        .setOrigin(0.5, 1)
-        .setScale(data.scale);
+            // Elegimos de los candidatos filtrados
+            data = Phaser.Utils.Array.GetRandom(candidates);
 
-        // HITBOX CONTROLADA POR VARIABLES
-        obstacle.body.setSize(
-            data.hitbox.w,
-            data.hitbox.h
-        );
+            obstacle = this.physics.add.sprite(
+                w + 100,
+                this.groundY + data.yOffset,
+                data.key
+            )
+            .setOrigin(0.5, 1)
+            .setScale(data.scale);
 
-        obstacle.body.setOffset(
-            data.hitbox.ox,
-            data.hitbox.oy
-        );
+            // HITBOX CONTROLADA POR VARIABLES
+            obstacle.body.setSize(
+                data.hitbox.w,
+                data.hitbox.h
+            );
 
-        // Alternar obstáculo
-        this.groundObstacleIndex =
-            (this.groundObstacleIndex + 1) % this.groundObstacles.length;
+            obstacle.body.setOffset(
+                data.hitbox.ox,
+                data.hitbox.oy
+            );
 
-    } else {
+            // (Ya no necesitamos el índice groundObstacleIndex porque usamos el filtro de arriba)
 
-        // OBSTÁCULO AÉREO CON IMÁGENES
-        const data = Phaser.Utils.Array.GetRandom(this.airObstacles);
+        } else {
+            // OBSTÁCULO AÉREO CON IMÁGENES
+            
+            // NUEVO: Filtramos también los aéreos
+            let candidates = this.airObstacles.filter(o => o.key !== this.lastObstacleKey);
+            if (candidates.length === 0) candidates = this.airObstacles;
 
-        obstacle = this.physics.add.sprite(
-            w + 100,
-            this.groundY + data.yOffset,
-            data.key
-        )
-        .setOrigin(0.5, 1)
-        .setScale(data.scale);
+            data = Phaser.Utils.Array.GetRandom(candidates);
 
-        // HITBOX para obstáculos aéreos
-        obstacle.body.setSize(
-            data.hitbox.w,
-            data.hitbox.h
-        );
+            obstacle = this.physics.add.sprite(
+                w + 100,
+                this.groundY + data.yOffset,
+                data.key
+            )
+            .setOrigin(0.5, 1)
+            .setScale(data.scale);
 
-        obstacle.body.setOffset(
-            data.hitbox.ox,
-            data.hitbox.oy
-        );
+            // HITBOX para obstáculos aéreos
+            obstacle.body.setSize(
+                data.hitbox.w,
+                data.hitbox.h
+            );
 
+            obstacle.body.setOffset(
+                data.hitbox.ox,
+                data.hitbox.oy
+            );
+        }
+
+        // NUEVO: Guardamos este obstáculo como "el último usado"
+        this.lastObstacleKey = data.key;
+
+        this.obstacles.add(obstacle);
+
+        obstacle.body.setAllowGravity(false);
+        obstacle.body.setImmovable(true);
     }
 
-    this.obstacles.add(obstacle);
-
-    obstacle.body.setAllowGravity(false);
-    obstacle.body.setImmovable(true);
-}
-
     handleCollision(obstacle) {
-        return;
+        //return;
         if (obstacle.hit) return; // Evitar múltiples impactos
         obstacle.hit = true;
         obstacle.fillColor = 0x555555; // Cambiar color al chocar
