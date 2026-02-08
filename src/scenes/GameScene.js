@@ -43,7 +43,7 @@ export default class GameScene extends Phaser.Scene {
 
         // Animación de Muerte (Zombie mordiendo)
         this.load.spritesheet('anim_bite', 'assets/img/morder.png', { 
-            frameWidth: 204, 
+            frameWidth: 171, 
             frameHeight: 120 
         });
     // --- Fondo tileable ---
@@ -54,12 +54,22 @@ export default class GameScene extends Phaser.Scene {
     this.load.image('obstaculoBarril', 'assets/img/obstaculoBarril.png');
     this.load.image('obstaculoCoche', 'assets/img/obstaculoCoche.png');
     this.load.image('obstaculoBarricada', 'assets/img/obstaculoBarricada.png');
+
+    // Obstáculos altos
+    this.load.image('obstaculo_tuberia', 'assets/img/obstaculo_tuberia.png');
+    this.load.image('obstaculo_viga', 'assets/img/obstaculo_viga.png');
+    this.load.image('obstaculo_grua', 'assets/img/obstaculo_grua.png');
+    this.load.image('obstaculo_tunel', 'assets/img/obstaculo_tunel.png');
 }
 
     // =================================================================
     // 2. CREATE: CONFIGURACIÓN INICIAL DEL MUNDO
     // =================================================================
     create() {
+
+        // LÍNEA PARA VER HITBOX
+        // this.physics.world.createDebugGraphic();
+
         // Variables globales del juego
         this.isGameOver = false;
         this.gameSpeed = 6;            // Velocidad de desplazamiento
@@ -72,7 +82,7 @@ export default class GameScene extends Phaser.Scene {
 
         // --- LÍNEA DEL SUELO ---
         // 'groundY' marca la posición Y exacta donde apoyan los pies.
-        this.groundY = h - 50; 
+        this.groundY = h - 80; 
 
         // --- FONDO INFINITO ---
         const bgTexture = this.textures.get('background').getSourceImage();
@@ -100,6 +110,7 @@ export default class GameScene extends Phaser.Scene {
         // Posición: X=250 (adelantado), Y=groundY (pegado al suelo).
         this.player = this.physics.add.sprite(250, this.groundY, 'anim_run').setOrigin(0.5, 1);
         this.player.play('run');
+        this.player.setDepth(5);
 
         // Configuración de Hitbox (Caja de colisión) para CORRER
         this.player.body.setSize(50, 120); // Caja alta
@@ -115,7 +126,7 @@ export default class GameScene extends Phaser.Scene {
         this.anims.create({
             key: 'bite',
             frames: this.anims.generateFrameNumbers('anim_bite', { start: 0, end: -1 }),
-            frameRate: 3, // Ajusta la velocidad si muerden muy rápido
+            frameRate: 2, // Ajusta la velocidad si muerden muy rápido
             repeat: 0      // 0 = Lo hace una vez y para (no queremos que lo muerda infinitamente en bucle)
         });
         
@@ -127,7 +138,7 @@ export default class GameScene extends Phaser.Scene {
         this.zombieHorde.body.setSize(50, 120);
         this.zombieHorde.body.setOffset(50, 20);
 
-        this.zombieText = this.add.text(50, this.groundY - 160, "¡RAAWR!", { fontSize: '12px', color: 'rgb(7, 7, 7)' }).setOrigin(0.5);
+        this.zombieText = this.add.text(50, this.groundY - 160, "¡RAAWR!", { fontSize: '12px', color: '#0f0' }).setOrigin(0.5);
 
         // --- 6. GRUPO DE OBSTÁCULOS ---
 this.obstacles = this.physics.add.group({
@@ -139,23 +150,52 @@ this.obstacles = this.physics.add.group({
 this.groundObstacles = [
     {
         key: 'obstaculoBarril',
-        scale: 0.7,
-        yOffset: 20, // Para ajustar la posición vertical si es necesario
-        hitbox: { w: 60, h: 90, ox: 5, oy: 30 }
+        scale: 0.6,
+        yOffset: 10, // Para ajustar la posición vertical si es necesario
+        hitbox: { w: 60, h: 90, ox: 20, oy: 30 }
     },
     {
         key: 'obstaculoCoche',
-        scale: 1.45,
-        yOffset: 75, // El coche es más alto, así que lo bajamos un poco para que toque el suelo
-        hitbox: { w: 100, h: 30, ox: 50, oy: 50 } // Especificamos hitbox personalizada para el coche
+        scale: 1.3,
+        yOffset: 50, // El coche es más alto, así que lo bajamos un poco para que toque el suelo
+        hitbox: { w: 150, h: 80, ox: 40, oy: 60 } // Especificamos hitbox personalizada para el coche
     },
     {
         key: 'obstaculoBarricada',
-        scale: 1.3,
-        yOffset: 35,
-        hitbox: { w: 50, h: 50, ox: 20, oy: 90 }
+        scale: 1.2,
+        yOffset: 10,
+        hitbox: { w: 100, h: 180, ox: 30, oy: 40 }
     }
 ];
+
+// Definimos los tipos de obstáculos aéreos
+this.airObstacles = [
+    {
+        key: 'obstaculo_tuberia',
+        scale: 0.5,
+        yOffset: 25,
+        hitbox: { w: 330, h: 260, ox: 240, oy: -100 }  // Hitbox más grande y sin offset
+    },
+    {
+        key: 'obstaculo_viga',
+        scale: 0.5,
+        yOffset: 25,
+        hitbox: { w: 140, h: 800, ox: 0, oy: 0 }
+    },
+    {
+        key: 'obstaculo_grua',
+        scale: 0.5,
+        yOffset: 0,
+        hitbox: { w: 110, h: 350, ox: 600, oy: -100 }
+    },
+    {
+        key: 'obstaculo_tunel',
+        scale: 0.4,
+        yOffset: 20,
+        hitbox: { w: 500, h: 300, ox: 0, oy: 0 }
+    }
+];
+
 
 // Detectar colisión Jugador vs Obstáculo
         this.physics.add.overlap(this.player, this.obstacles, (player, obstacle) => {
@@ -177,9 +217,9 @@ this.groundObstacles = [
         // Interfaz de Usuario (UI)
         this.scoreText = this.add.text(20, 22, 'Distancia: 0m', { 
             fontSize: '20px', fill: '#fff' });
-        this.add.text(w - 220, 22, 'Peligro:', { 
+        this.add.text(w - 200, 22, 'Peligro:', { 
             fontSize: '16px', fill: '#fff' });
-        this.dangerBar = this.add.rectangle(w - 30, 30, 100, 10, 0xff0000).setOrigin(1, 0.5);
+        this.dangerBar = this.add.rectangle(w - 20, 30, 100, 10, 0xff0000).setOrigin(1, 0.5);
     }
 
     // =================================================================
@@ -193,7 +233,7 @@ this.groundObstacles = [
         this.bg.tilePositionX += this.gameSpeed;
         this.scoreDistance += 0.05 * this.gameSpeed;
         this.scoreText.setText(`Distancia: ${Math.floor(this.scoreDistance)}m`);
-        this.gameSpeed += 0.002;// Aumento de la velocidad según avanzamos
+        this.gameSpeed += 0.005;// Aumento de la velocidad según avanzamos
 
         // 2. Detectar intención de agacharse
         const isDucking = this.cursors.down.isDown || this.duckBtnDown;
@@ -240,7 +280,7 @@ this.groundObstacles = [
             // 2. Frenamos cualquier velocidad de caída residual
             this.player.body.velocity.y = 0;
             
-            // 3. Le decimos que estamos tocando suelo
+            // 3. Le decimos a Phaser "Oye, que estamos tocando suelo"
             this.player.body.touching.down = true; 
         }
     }
@@ -300,7 +340,7 @@ this.groundObstacles = [
         if (isDucking) {
             // --- MODO AGACHADO ---
             this.player.body.setSize(50, 60);
-            this.player.body.setOffset(34, 40); 
+            this.player.body.setOffset(34, 40); // Ajustado para imagen 119x100
             
             if (this.player.anims.currentAnim.key !== 'duck') {
                 this.player.play('duck', true);
@@ -319,7 +359,7 @@ this.groundObstacles = [
         }*/
     }
 
-   spawnObstacle() {
+    spawnObstacle() {
     if (this.isGameOver) return;
 
         const w = this.scale.width;
@@ -354,13 +394,27 @@ this.groundObstacles = [
             (this.groundObstacleIndex + 1) % this.groundObstacles.length;
 
     } else {
-        // OBSTÁCULO AÉREO
-        const height = 400;
-        const gap = 80;
-        const yPos = this.groundY - gap - (height / 2);
-        
-        obstacle = this.add.rectangle(w + 50, yPos, 70, height, 0xff0000);
-        this.physics.add.existing(obstacle);
+        // OBSTÁCULO AÉREO CON IMÁGENES
+        const data = Phaser.Utils.Array.GetRandom(this.airObstacles);
+
+        obstacle = this.physics.add.sprite(
+            w + 100,
+            this.groundY + data.yOffset,
+            data.key
+        )
+        .setOrigin(0.5, 1)
+        .setScale(data.scale);
+
+        // HITBOX para obstáculos aéreos
+        obstacle.body.setSize(
+            data.hitbox.w,
+            data.hitbox.h
+        );
+
+        obstacle.body.setOffset(
+            data.hitbox.ox,
+            data.hitbox.oy
+        );
     }
 
     this.obstacles.add(obstacle);
@@ -370,7 +424,7 @@ this.groundObstacles = [
 }
 
     handleCollision(obstacle) {
-        return;
+        //return;
         if (obstacle.hit) return; // Evitar múltiples impactos
         obstacle.hit = true;
         obstacle.fillColor = 0x555555; // Cambiar color al chocar
@@ -399,9 +453,9 @@ this.groundObstacles = [
         this.dangerBar.width = barWidth;
 
         // Movimiento suave del zombie
-        const targetX = this.player.x - (this.zombieDistance * 2);
+        const targetX = this.player.x - (this.zombieDistance * 3);
         this.zombieHorde.x = Phaser.Math.Linear(this.zombieHorde.x, targetX, 0.1);
-        this.zombieText.x = this.zombieHorde.x + 50;
+        this.zombieText.x = this.zombieHorde.x;
 
         // Chequeo de Game Over (Distancia o Contacto físico)
         if (this.zombieDistance <= 0) this.triggerGameOver();
