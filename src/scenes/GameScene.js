@@ -54,12 +54,22 @@ export default class GameScene extends Phaser.Scene {
     this.load.image('obstaculoBarril', 'assets/img/obstaculoBarril.png');
     this.load.image('obstaculoCoche', 'assets/img/obstaculoCoche.png');
     this.load.image('obstaculoBarricada', 'assets/img/obstaculoBarricada.png');
+
+    // Obstáculos altos
+    this.load.image('obstaculo_tuberia', 'assets/img/obstaculo_tuberia.png');
+    this.load.image('obstaculo_viga', 'assets/img/obstaculo_viga.png');
+    this.load.image('obstaculo_grua', 'assets/img/obstaculo_grua.png');
+    this.load.image('obstaculo_tunel', 'assets/img/obstaculo_tunel.png');
 }
 
     // =================================================================
     // 2. CREATE: CONFIGURACIÓN INICIAL DEL MUNDO
     // =================================================================
     create() {
+
+        // LÍNEA PARA VER HITBOX
+        // this.physics.world.createDebugGraphic();
+
         // Variables globales del juego
         this.isGameOver = false;
         this.gameSpeed = 6;            // Velocidad de desplazamiento
@@ -100,6 +110,7 @@ export default class GameScene extends Phaser.Scene {
         // Posición: X=250 (adelantado), Y=groundY (pegado al suelo).
         this.player = this.physics.add.sprite(250, this.groundY, 'anim_run').setOrigin(0.5, 1);
         this.player.play('run');
+        this.player.setDepth(5);
 
         // Configuración de Hitbox (Caja de colisión) para CORRER
         this.player.body.setSize(50, 120); // Caja alta
@@ -156,6 +167,35 @@ this.groundObstacles = [
         hitbox: { w: 100, h: 180, ox: 30, oy: 40 }
     }
 ];
+
+// Definimos los tipos de obstáculos aéreos
+this.airObstacles = [
+    {
+        key: 'obstaculo_tuberia',
+        scale: 0.5,
+        yOffset: 25,
+        hitbox: { w: 330, h: 260, ox: 240, oy: -100 }  // Hitbox más grande y sin offset
+    },
+    {
+        key: 'obstaculo_viga',
+        scale: 0.5,
+        yOffset: 25,
+        hitbox: { w: 140, h: 800, ox: 0, oy: 0 }
+    },
+    {
+        key: 'obstaculo_grua',
+        scale: 0.5,
+        yOffset: 0,
+        hitbox: { w: 110, h: 350, ox: 600, oy: -100 }
+    },
+    {
+        key: 'obstaculo_tunel',
+        scale: 0.4,
+        yOffset: 20,
+        hitbox: { w: 500, h: 300, ox: 0, oy: 0 }
+    }
+];
+
 
 // Detectar colisión Jugador vs Obstáculo
         this.physics.add.overlap(this.player, this.obstacles, (player, obstacle) => {
@@ -354,13 +394,27 @@ this.groundObstacles = [
             (this.groundObstacleIndex + 1) % this.groundObstacles.length;
 
     } else {
-        // OBSTÁCULO AÉREO
-        const height = 400;
-        const gap = 80;
-        const yPos = this.groundY - gap - (height / 2);
+        // OBSTÁCULO AÉREO CON IMÁGENES
+        const data = Phaser.Utils.Array.GetRandom(this.airObstacles);
 
-        obstacle = this.add.rectangle(w + 50, yPos, 70, height, 0xff0000, 0);
-        this.physics.add.existing(obstacle);
+        obstacle = this.physics.add.sprite(
+            w + 100,
+            this.groundY + data.yOffset,
+            data.key
+        )
+        .setOrigin(0.5, 1)
+        .setScale(data.scale);
+
+        // HITBOX para obstáculos aéreos
+        obstacle.body.setSize(
+            data.hitbox.w,
+            data.hitbox.h
+        );
+
+        obstacle.body.setOffset(
+            data.hitbox.ox,
+            data.hitbox.oy
+        );
     }
 
     this.obstacles.add(obstacle);
