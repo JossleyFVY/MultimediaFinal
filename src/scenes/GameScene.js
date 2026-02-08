@@ -300,7 +300,7 @@ this.groundObstacles = [
         if (isDucking) {
             // --- MODO AGACHADO ---
             this.player.body.setSize(50, 60);
-            this.player.body.setOffset(34, 40); // Ajustado para imagen 119x100
+            this.player.body.setOffset(34, 40); 
             
             if (this.player.anims.currentAnim.key !== 'duck') {
                 this.player.play('duck', true);
