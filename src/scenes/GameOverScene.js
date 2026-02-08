@@ -10,6 +10,10 @@ export default class GameOverScene extends Phaser.Scene {
     }
 
     create() {
+
+        this.finalMusic = this.sound.add('musica_final', { volume: 1, loop: true });
+        this.finalMusic.play();
+
         const w = this.scale.width;
         const h = this.scale.height;
 
@@ -26,6 +30,7 @@ export default class GameOverScene extends Phaser.Scene {
 
         restartBtn.on('pointerdown', () => {
             this.scene.start('GameScene');
+            this.sound.stopAll();
         });
         
         const menuBtn = this.add.rectangle(w / 2, h * 0.85, 200, 40, 0x666666).setInteractive();
@@ -33,6 +38,7 @@ export default class GameOverScene extends Phaser.Scene {
 
         menuBtn.on('pointerdown', () => {
             this.scene.start('MainMenuScene');
+            this.sound.stopAll();
         });
     }
 }
