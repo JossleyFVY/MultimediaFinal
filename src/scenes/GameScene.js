@@ -39,6 +39,7 @@ export default class GameScene extends Phaser.Scene {
         this.load.audio('musica_fondo', 'assets/audio/musica_fondo.mp3');
         // Efectos de sonido (SFX)
         this.load.audio('sfx_salto', 'assets/audio/sonido_salto.mp3');
+        this.load.audio('sfx_agacharse', 'assets/audio/sonido_agacharse.mp3');
         this.load.audio('sfx_golpe', 'assets/audio/sonido_choque.mp3'); 
         this.load.audio('sfx_muerte', 'assets/audio/sonido_morder.mp3');
         this.load.audio('sfx_zombie', 'assets/audio/sonido_zombie.mp3');
@@ -52,11 +53,12 @@ export default class GameScene extends Phaser.Scene {
         // --- VARIABLES DE ESTADO ---
         this.isGameOver = false;       // Controla si el juego ha terminado
         this.isPaused = false;         // Controla la pausa
-        this.gameSpeed = 6;            // Velocidad inicial del scroll
+        this.gameSpeed = 5;            // Velocidad inicial del scroll
         this.scoreDistance = 0;        // Metros recorridos
         this.mistakeTimestamps = [];   // Array para la regla de "2 golpes en 10s"
         this.zombieDistance = 100;     // Distancia del zombie (100=lejos, 0=te come)
         this.lastObstacleKey = null;   // Para evitar obstáculos repetidos
+        this.obstacleCount = 0;
 
         // Dimensiones pantalla
         const w = this.scale.width;
@@ -133,7 +135,7 @@ export default class GameScene extends Phaser.Scene {
         this.cursors = this.input.keyboard.createCursorKeys(); // Teclado
 
         // Generador de obstáculos (Timer)
-        this.spawnEvent = this.time.addEvent({ delay: 1500, callback: this.spawnObstacle, callbackScope: this, loop: true });
+        this.spawnEvent = this.time.addEvent({ delay: 1800, callback: this.spawnObstacle, callbackScope: this, loop: true });
 
         // --- SISTEMA DE AUDIO ---
         
@@ -243,8 +245,7 @@ export default class GameScene extends Phaser.Scene {
             
             if (this.player.anims.currentAnim.key !== 'duck') {
                 this.player.play('duck', true);
-                // Usamos sonido de salto modificado para simular "esquivar"
-                this.sound.play('sfx_salto', { volume: 0.3, rate: 1.5, detune: 600 });
+                this.sound.play('sfx_agacharse', { volume: 1 });
             }
             // Forzar posición Y
             if (this.player.body.touching.down) this.player.y = this.groundY;
@@ -256,10 +257,12 @@ export default class GameScene extends Phaser.Scene {
         if (this.isGameOver || this.isPaused) return;
 
         const w = this.scale.width;
+
+        this.obstacleCount++;
+        
         // Elegir aleatoriamente suelo (low) o aire (high)
         const type = Math.random() > 0.5 ? 'low' : 'high';
         let data;
-
         let pool = (type === 'low') ? this.groundObstacles : this.airObstacles;
         
         // FILTRO: No repetir el último obstáculo
@@ -271,17 +274,49 @@ export default class GameScene extends Phaser.Scene {
 
         let obstacle = this.physics.add.sprite(w + 100, this.groundY + data.yOffset, data.key)
             .setOrigin(0.5, 1).setScale(data.scale);
-
+        
+        
         // Configurar Hitbox personalizada del obstáculo
         obstacle.body.setSize(data.hitbox.w, data.hitbox.h);
-        obstacle.body.setOffset(data.hitbox.ox, data.hitbox.oy);
-        
+        obstacle.body.setOffset(data.hitbox.ox, data.hitbox.oy);        
         this.obstacles.add(obstacle);
         obstacle.body.setAllowGravity(false);
         obstacle.body.setImmovable(true);
-    }
 
-    // Manejar colisión (Golpe)
+        //AÑADIR FLECHAS DE TURORIAL=======================
+        if (this.obstacleCount <= 10) {
+        if (type === 'low') {
+            this.showTutorialHint('⬆', '#00ff00'); // Verde
+        } else {
+            this.showTutorialHint('⬇', '#ffa500'); // Naranja
+        }
+    }
+}
+//  ========= TUTORIAL ====================
+
+    showTutorialHint(symbol, color) {
+        const w = this.scale.width;
+        const h = this.scale.height;
+
+        const hintText = this.add.text(w - 150, h / 2, symbol, {
+            fontSize: '100px',
+            fontStyle: 'bold',
+            fill: color,
+            stroke: '#000000',
+            strokeThickness: 6
+        }).setOrigin(0.5).setDepth(100);
+
+        this.tweens.add({
+            targets: hintText,
+            alpha: 0,
+            scale: 1.5,
+            x: w - 300,
+            duration: 1800,
+            ease: 'Power1',
+            onComplete: () => { hintText.destroy(); }
+        });
+    }
+    // Manejar colisión (Golpe)==================
     handleCollision(obstacle) {
         // Si ya hemos chocado con este objeto, ignorar (para no restar vidas 60 veces seguidas)
         if (this.isGameOver || obstacle.hit) return; 
@@ -349,27 +384,27 @@ export default class GameScene extends Phaser.Scene {
         if (this.zombieDistance <= 0) this.triggerGameOver();
     }
 
-    // Crear botones táctiles (Pausa y Movimiento)
+    // =================================================================
+    // CONTROLES: UNO A CADA LADO (IZQUIERDA = AGACHARSE, DERECHA = SALTAR)
+    // =================================================================
     createMobileControls(w, h) {
-        const btnSize = 60;
-        const cornerRadius = 15; 
-        const buttonAlpha = 0.15; // Transparencia sutil
+        const btnSize = 80;
+        const cornerRadius = 25; 
+        const buttonAlpha = 0.15; 
 
-        // BOTÓN PAUSA
+        // --- BOTÓN PAUSA (Centro Arriba) ---
         const pauseBtn = this.add.text(w / 2, 30, '⏸ PAUSA', { 
             fontSize: '20px', fill: '#fff', backgroundColor: '#00000088', padding: { x: 10, y: 5 }
         }).setOrigin(0.5).setInteractive().setScrollFactor(0).setDepth(100);
 
         pauseBtn.on('pointerdown', () => {
             if (this.isPaused) {
-                // REANUDAR
                 this.isPaused = false;
                 this.physics.resume(); this.anims.resumeAll(); this.spawnEvent.paused = false;
                 if(this.bgMusic.isPaused) this.bgMusic.resume();
                 if(this.zombieLoop.isPaused) this.zombieLoop.resume(); 
                 pauseBtn.setText('⏸ PAUSA'); pauseBtn.setStyle({ fill: '#fff' });
             } else {
-                // PAUSAR
                 this.isPaused = true;
                 this.physics.pause(); this.anims.pauseAll(); this.spawnEvent.paused = true;
                 if(this.bgMusic.isPlaying) this.bgMusic.pause();
@@ -378,40 +413,49 @@ export default class GameScene extends Phaser.Scene {
             }
         });
 
-        // BOTONES MOVIMIENTO (Gráficos redondeados)
-        const buttonsX = w - 60;
-        const jumpY = h - 140; 
-        const duckY = h - 50;  
+        // --- COORDENADAS BOTONES ---
+        const btnY = h - 50;      // Altura común (abajo)
+        const duckX = 60;         // Izquierda
+        const jumpX = w - 60;     // Derecha
 
+        // --- DIBUJO VISUAL (Graphics) ---
         const graphics = this.add.graphics();
         graphics.setScrollFactor(0);
         graphics.setDepth(99); 
         graphics.fillStyle(0xffffff, buttonAlpha);
-        graphics.fillRoundedRect(buttonsX - btnSize/2, jumpY - btnSize/2, btnSize, btnSize, cornerRadius);
-        graphics.fillRoundedRect(buttonsX - btnSize/2, duckY - btnSize/2, btnSize, btnSize, cornerRadius);
-
-        // Hitboxes invisibles (la zona interactiva)
-        const jumpBtnHitbox = this.add.rectangle(buttonsX, jumpY, btnSize, btnSize, 0xffffff, 0.001)
-            .setInteractive().setScrollFactor(0).setDepth(100);
-        this.add.text(buttonsX, jumpY, '⬆', { fontSize: '30px' }).setOrigin(0.5).setScrollFactor(0).setDepth(100);
         
-        jumpBtnHitbox.on('pointerdown', () => this.jumpBtnDown = true);
-        jumpBtnHitbox.on('pointerup', () => this.jumpBtnDown = false);
-        jumpBtnHitbox.on('pointerout', () => this.jumpBtnDown = false);
+        // Dibujar Rectángulo Izquierdo (Agacharse)
+        graphics.fillRoundedRect(duckX - btnSize/2, btnY - btnSize/2, btnSize, btnSize, cornerRadius);
+        // Dibujar Rectángulo Derecho (Saltar)
+        graphics.fillRoundedRect(jumpX - btnSize/2, btnY - btnSize/2, btnSize, btnSize, cornerRadius);
 
-        const duckBtnHitbox = this.add.rectangle(buttonsX, duckY, btnSize, btnSize, 0xffffff, 0.001)
+        // --- HITBOXES E ICONOS ---
+
+        // 1. AGACHARSE (IZQUIERDA)
+        const duckBtnHitbox = this.add.rectangle(duckX, btnY, btnSize, btnSize, 0xffffff, 0.001)
             .setInteractive().setScrollFactor(0).setDepth(100);
-        this.add.text(buttonsX, duckY, '⬇', { fontSize: '30px' }).setOrigin(0.5).setScrollFactor(0).setDepth(100);
+        this.add.text(duckX, btnY, '⬇', { fontSize: '30px' }).setOrigin(0.5).setScrollFactor(0).setDepth(100);
         
         duckBtnHitbox.on('pointerdown', () => this.duckBtnDown = true);
         duckBtnHitbox.on('pointerup', () => this.duckBtnDown = false);
         duckBtnHitbox.on('pointerout', () => this.duckBtnDown = false);
+
+        // 2. SALTAR (DERECHA)
+        const jumpBtnHitbox = this.add.rectangle(jumpX, btnY, btnSize, btnSize, 0xffffff, 0.001)
+            .setInteractive().setScrollFactor(0).setDepth(100);
+        this.add.text(jumpX, btnY, '⬆', { fontSize: '30px' }).setOrigin(0.5).setScrollFactor(0).setDepth(100);
+        
+        jumpBtnHitbox.on('pointerdown', () => this.jumpBtnDown = true);
+        jumpBtnHitbox.on('pointerup', () => this.jumpBtnDown = false);
+        jumpBtnHitbox.on('pointerout', () => this.jumpBtnDown = false);
     }
 
     // GAME OVER
     triggerGameOver() {
         if (this.isGameOver) return;
         this.isGameOver = true;
+
+        this.tweens.killAll(); // Esto evita el congelamiento si hay una flecha en pantalla
 
         // 1. Parar música de fondo y loops
         if (this.bgMusic) this.bgMusic.stop();

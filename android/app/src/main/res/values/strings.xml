@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Parkour Zombie</string>
+    <string name="title_activity_main">Parkour Zombie</string>
+    <string name="package_name">com.multimedia.parkourzombie</string>
+    <string name="custom_url_scheme">com.multimedia.parkourzombie</string>
+</resources>
