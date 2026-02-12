@@ -5,9 +5,9 @@ export default class GameScene extends Phaser.Scene {
         super('GameScene'); // Nombre clave de la escena para Phaser
     }
 
-    // ================================================================
+    // =================================================================
     // 1. PRELOAD: CARGA DE TODOS LOS RECURSOS (SE EJECUTA AL INICIO)
-    // ================================================================
+    // =================================================================
     preload() {
         // --- JUGADOR (HOJAS DE SPRITES) ---
         // Cargamos las animaciones. frameWidth/Height es el tamaño de cada cuadro.
