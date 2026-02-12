@@ -32,7 +32,6 @@ export default class GameScene extends Phaser.Scene {
         this.load.image('obstaculo_tuberia', 'assets/img/obstaculo_tuberia1.png');
         this.load.image('obstaculo_viga', 'assets/img/obstaculo_viga.png');
         this.load.image('obstaculo_grua', 'assets/img/obstaculo_grua1.png');
-        this.load.image('obstaculo_tunel', 'assets/img/obstaculo_tunel1.png');
 
         // --- AUDIOS ---
         // Música de fondo
